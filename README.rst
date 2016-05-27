@@ -33,6 +33,7 @@ weberFuncs 包功能说明
 
 相关命令如下
 ---------------
+::
 
     $ python setup.py sdist  #编译包
     $ python setup.py sdist upload #上传包

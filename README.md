@@ -1,3 +1,5 @@
 # test
-test for first time
-2016.5.26
+
+Public functions library  by Weber Juche.
+
+2016.5.27
