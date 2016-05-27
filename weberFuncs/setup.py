@@ -22,7 +22,7 @@ def loadLongDesc(fname):
 setup(
     name = "weberFuncs", #包的名字
     packages = ["weberFuncs"], #包含的包，可以多个，这是一个列表
-    version = "0.0.4", #当前包的版本，这个按你自己需要的版本控制方式来
+    version = "0.0.5", #当前包的版本，这个按你自己需要的版本控制方式来
 
     keywords = "punblic python funcs", #关于当前包的一些关键字，方便PyPI进行分类。
     author = "Weber Juche", # 包的作者
@@ -33,8 +33,11 @@ setup(
     zip_safe=True,
     # zip_safe = False,
 
-    description = u"包含了常用的简单函数的共享库", #关于这个包的描述
+    description = 'Public functions library wrote by Weber Juche.',
+    #u"包含了常用的简单函数的共享库", #关于这个包的描述,这个会出现 PyPI 的列表页面
+
     long_description = loadLongDesc("README.rst"), # 参见loadLongDesc方法说明
+
     classifiers = [
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
