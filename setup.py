@@ -24,15 +24,14 @@ setup(
     packages = ["weberFuncs"], #包含的包，可以多个，这是一个列表
     version = "0.0.1", #当前包的版本，这个按你自己需要的版本控制方式来
 
-    keywords = "weber python funcs", #关于当前包的一些关键字，方便PyPI进行分类。
+    keywords = "punblic python funcs", #关于当前包的一些关键字，方便PyPI进行分类。
     author = "Weber Juche", # 包的作者
     author_email = "weber.juche@gmail.com", #作者的邮件地址
-    url = "https://github.com/Weber-JC/weberFuncs",  #这个包的项目地址
+    url = "https://github.com/Weber-JC/PythonEggs/tree/master/weberFuncs",  #这个包的项目地址
     license = "MIT", #授权方式,
 
     zip_safe=True,
     # zip_safe = False,
-
 
     description = u"包含了常用的简单函数的共享库", #关于这个包的描述
     long_description = loadLongDesc("README.rst"), # 参见loadLongDesc方法说明
