@@ -103,7 +103,7 @@ def printCmdString(sHint,CmdStr) : #采用列表来存储CmdStr入口参数
         try:
             sUTF = CmdStr[i]
             if not IsUtf8String(sUTF):
-                sUTF = sUTF.decode('GBK').encode('utf-8')
+                sUTF = sUTF.decode('GBK').encode('UTF-8')
         except UnicodeDecodeError,e:
             # sUTF = CmdStr[i]
             pass
