@@ -10,6 +10,128 @@ Created on 2016-5-30
 
 import sys
 from weberFuncs import PrintTimeMsg,printHexString,printCmdString,IsUtf8String
+
+CMDID_HREAT_BEAT = 0x80000000 #心跳包取值
+CMDID_NOTIFY_MSG = 0          #通知消息
+
+CMD0_CHECK_AUTH = '!CSTP.CheckAuth' # 检查接入授权命令字
+CMD0_ECHO_CMD = '!CSTP.EchoCmd' # 接入框架回声命令字，能则实现
+
+# P2P11模式中，内含命令：
+CMD0_P2P11_SEND_SYSTEM_MSG = '!P2P11.SendSystemMsg' # 发送系统消息
+#  1=sAction       # PeerOnline=上线,PeerOffline=下线
+#  2=sPairId
+#  3=sSuffix
+#  4=sOnlineList   #在线 sSuffix 列表串，逗号分隔
+#  5+=其它参数
+
+CMD0_P2P11_SEND_CMD_TOPEER = '!P2P11.SendCmdToPeer' # 向同一sPairId中的其它Peer发命令请求
+#  1=sSuffixFrom   # Peer消息源，由框架程序插入
+#  2=sSuffixList   # 逗号分隔的 sSuffix；取值 * ，表示全部其它Peer
+#  3+=其它参数
+
+
+#--------------------------------------
+# 提供 CmdId 相关计算函数
+def Int8ToHex(dwInt):
+    """ 将双字无符号整数转为8字节16进制串 """
+    sS = '%.8X' % dwInt
+    return sS
+
+def HexToInt8(sHex):
+    """ 将8字节16进制串转为双字无符号整数 """
+    try:
+        return int(sHex,16)
+    except Exception, e:
+        PrintTimeMsg('HexToInt8(%s)=Error' % sHex)
+        raise
+
+def IsHeartBeat(dwCmdId):
+    """ 是否是心跳包 """
+    global CMDID_HREAT_BEAT
+    return dwCmdId==CMDID_HREAT_BEAT
+
+def IsCmdNotify(dwCmdId):
+    """ 是否是广播通知消息，无需应答 """
+    return dwCmdId==CMDID_NOTIFY_MSG
+
+def IsCmdRequest(dwCmdId):
+    """ 是否是请求命令 """
+    global CMDID_HREAT_BEAT
+    return 0<dwCmdId<CMDID_HREAT_BEAT
+
+def IsCmdReply(dwCmdId):
+    """ 是否是应答命令 """
+    global CMDID_HREAT_BEAT
+    return CMDID_HREAT_BEAT<dwCmdId
+
+def GetCmdType(dwCmdId):
+    if IsCmdReply(dwCmdId): return 'Reply'
+    if IsCmdNotify(dwCmdId): return 'Notify'
+    if IsCmdRequest(dwCmdId): return 'Request'
+    return 'HeartBeat'
+
+def GetCmdReplyFmRequest(dwCmdId):
+    """ 从请求命令转换得到应答命令，返回0表示失败 """
+    global CMDID_HREAT_BEAT
+    if IsCmdRequest(dwCmdId):
+        return dwCmdId+CMDID_HREAT_BEAT
+    else:
+        PrintTimeMsg('GetCmdReplyFmRequest.dwCmdId=%.8X,Error' % dwCmdId)
+        return 0
+
+def GetCmdRequestFmReply(dwCmdId):
+    """ 从应答命令转换得到请求命令，返回0表示失败 """
+    global CMDID_HREAT_BEAT
+    if IsCmdReply(dwCmdId):
+        return dwCmdId-CMDID_HREAT_BEAT
+    else:
+        PrintTimeMsg('GetCmdRequestFmReply.dwCmdId=%.8X,Error' % dwCmdId)
+        return 0
+
+gdwReqCmdIdNext=1 #下一个有效的CmdId，
+def GenNewReqCmdId():
+    """ 生成新的请求命令标识 """
+    global gdwReqCmdIdNext
+    iCmdId = 1
+    if IsCmdRequest(gdwReqCmdIdNext):
+        iCmdId = gdwReqCmdIdNext
+        gdwReqCmdIdNext += 1
+    else:
+        gdwReqCmdIdNext = iCmdId
+    return iCmdId
+
+def testCmdId():
+    print Int8ToHex(0x00008000)
+    print Int8ToHex(0x80000000)
+    print Int8ToHex(0x8FFFFFFF)
+    print Int8ToHex(0xFFFFFFFF)
+    print Int8ToHex(HexToInt8('8FFFFFFF'))
+    print '-'*8
+    print IsHeartBeat(0)
+    print IsHeartBeat(0x80000000)
+    print IsCmdNotify(0)
+    print '-'*8
+    print IsCmdRequest(0)
+    print IsCmdRequest(1)
+    print IsCmdRequest(0x80000000)
+    print IsCmdRequest(0x08000000)
+    print '-'*8
+    print IsCmdReply(0)
+    print IsCmdReply(0x80000000)
+    print IsCmdReply(0x80000001)
+    print IsCmdReply(0x08000000)
+    print '-'*8
+    print Int8ToHex(GetCmdReplyFmRequest(1234))
+    print Int8ToHex(GetCmdReplyFmRequest(0x80000001))
+    print '-'*8
+    print Int8ToHex(GetCmdRequestFmReply(1234))
+    print Int8ToHex(GetCmdRequestFmReply(0x80000123))
+    print '-'*8
+    print Int8ToHex(GenNewReqCmdId())
+    print Int8ToHex(GenNewReqCmdId())
+    print Int8ToHex(GenNewReqCmdId())
+
 #--------------------------------------
 # 序列化函数
 """
@@ -75,115 +197,6 @@ def testSerialCmdStr():
     '2016-04-26 11:48:25.282']
     PrintTestSerialCmdStr(lsCmdStr)
 
-
-#--------------------------------------
-# 提供 CmdId 相关计算函数
-
-CMDID_HREAT_BEAT = 0x80000000 #心跳包取值
-CMDID_NOTIFY_MSG = 0          #通知消息
-
-CMD0_CHECK_PASSWD = 'cstpLogin.CheckPasswd' # 链接登录命令字
-
-def Int8ToHex(dwInt):
-    """ 将双字无符号整数转为8字节16进制串 """
-    sS = '%.8X' % dwInt
-    return sS
-
-def HexToInt8(sHex):
-    """ 将8字节16进制串转为双字无符号整数 """
-    try:
-        return int(sHex,16)
-    except Exception, e:
-        PrintTimeMsg('HexToInt8(%s)=Error' % sHex)
-        raise
-
-
-def IsHeartBeat(dwCmdId):
-    """ 是否是心跳包 """
-    global CMDID_HREAT_BEAT
-    return dwCmdId==CMDID_HREAT_BEAT
-
-def IsCmdNotify(dwCmdId):
-    """ 是否是广播通知消息，无需应答 """
-    return dwCmdId==CMDID_NOTIFY_MSG
-
-def IsCmdRequest(dwCmdId):
-    """ 是否是请求命令 """
-    global CMDID_HREAT_BEAT
-    return 0<dwCmdId<CMDID_HREAT_BEAT
-
-def IsCmdReply(dwCmdId):
-    """ 是否是应答命令 """
-    global CMDID_HREAT_BEAT
-    return CMDID_HREAT_BEAT<dwCmdId
-
-def GetCmdType(dwCmdId):
-    if IsCmdReply(dwCmdId): return 'Reply'
-    if IsCmdNotify(dwCmdId): return 'Notify'
-    if IsCmdRequest(dwCmdId): return 'Request'
-    return 'HeartBeat'
-
-def GetCmdReplyFmRequest(dwCmdId):
-    """ 从请求命令转换得到应答命令，返回0表示失败 """
-    global CMDID_HREAT_BEAT
-    if IsCmdRequest(dwCmdId):
-        return dwCmdId+CMDID_HREAT_BEAT
-    else:
-        PrintTimeMsg('GetCmdReplyFmRequest.dwCmdId=%.8X,Error' % dwCmdId)
-        return 0
-
-def GetCmdRequestFmReply(dwCmdId):
-    """ 从应答命令转换得到请求命令，返回0表示失败 """
-    global CMDID_HREAT_BEAT
-    if IsCmdReply(dwCmdId):
-        return dwCmdId-CMDID_HREAT_BEAT
-    else:
-        PrintTimeMsg('GetCmdRequestFmReply.dwCmdId=%.8X,Error' % dwCmdId)
-        return 0
-
-gdwReqCmdIdNext=1 #下一个有效的CmdId，
-def GenNewReqCmdId():
-    """ 生成新的请求命令标识 """
-    global gdwReqCmdIdNext
-    iCmdId = 1
-    if IsCmdRequest(gdwReqCmdIdNext):
-        iCmdId = gdwReqCmdIdNext
-        gdwReqCmdIdNext += 1
-    else:
-        gdwReqCmdIdNext = iCmdId+1
-    return iCmdId
-
-def testCmdId():
-    print Int8ToHex(0x00008000)
-    print Int8ToHex(0x80000000)
-    print Int8ToHex(0x8FFFFFFF)
-    print Int8ToHex(0xFFFFFFFF)
-    print Int8ToHex(HexToInt8('8FFFFFFF'))
-    print '-'*8
-    print IsHeartBeat(0)
-    print IsHeartBeat(0x80000000)
-    print IsCmdNotify(0)
-    print '-'*8
-    print IsCmdRequest(0)
-    print IsCmdRequest(1)
-    print IsCmdRequest(0x80000000)
-    print IsCmdRequest(0x08000000)
-    print '-'*8
-    print IsCmdReply(0)
-    print IsCmdReply(0x80000000)
-    print IsCmdReply(0x80000001)
-    print IsCmdReply(0x08000000)
-    print '-'*8
-    print Int8ToHex(GetCmdReplyFmRequest(1234))
-    print Int8ToHex(GetCmdReplyFmRequest(0x80000001))
-    print '-'*8
-    print Int8ToHex(GetCmdRequestFmReply(1234))
-    print Int8ToHex(GetCmdRequestFmReply(0x80000123))
-    print '-'*8
-    print Int8ToHex(GenNewReqCmdId())
-    print Int8ToHex(GenNewReqCmdId())
-    print Int8ToHex(GenNewReqCmdId())
-
 #--------------------------------------
 def SerialCstpHeadToString(dwCmdId, dwDataLen):
     # 序列化出 CSTP 包头
@@ -226,6 +239,9 @@ def testSerialCstCmdStr():
     print Int8ToHex(dwCmdId),CmdStr
     printCmdString("test=",CmdStr)
 
+#--------------------------------------
+def GetTextPeerIdForP2P11(sPairId, sSuffix):
+    return '%s.%s' % (sPairId, sSuffix)
 #--------------------------------------
 def testBytes():
     s = '1234测试test'

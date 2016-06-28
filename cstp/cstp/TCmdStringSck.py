@@ -31,7 +31,7 @@ import socket
 import struct
 
 from weberFuncs import PrintTimeMsg,PrintAndSleep,printHexString,printCmdString,\
-    GetCurrentTime,GetTimeInteger,md5
+    GetCurrentTime#,GetTimeInteger,md5
 
 #-------------------------------------------------
 from CGlobalExitFlag import CGlobalExitFlag
@@ -39,7 +39,8 @@ from CQueueThread import CQueueObject,CQueueThread,CStartLoopThread
 
 from cstpFuncs import CMDID_HREAT_BEAT,GenNewReqCmdId,IsHeartBeat,IsCmdNotify,\
     GetCmdType, GetCmdRequestFmReply,GetCmdReplyFmRequest,\
-    CMDID_NOTIFY_MSG,CMD0_CHECK_PASSWD
+    CMDID_NOTIFY_MSG,CMD0_CHECK_AUTH,CMD0_ECHO_CMD,\
+    CMD0_P2P11_SEND_CMD_TOPEER
 
 from CSockReadWrite import CSockReadWrite
 
@@ -72,13 +73,16 @@ class TCmdStringSck:
     """
         封装异步通讯 TCmdStringSck 基类。应用类从该类继承
     """
-    def __init__(self, sServerIPAndPort, sAcctIdStrEncPasswd, sClientDeviceInfo=''):
+    def __init__(self, sHubId, sP2PKind, sServerIPAndPort, sAcctIdAndPwd, ynForceLogin, sClientInfo):
         global gef
         self.gef = gef
         self.sck = None
 
-        self.iSecondsWaitForSynCmd = 60 # 主线程等待异步请求的秒数
-        self.iSecondsReadFmServer = 10 # 从服务端读取数据的超时秒数
+        self.sHubId = sHubId
+        self.sP2PKind = sP2PKind
+
+        self.iSecondsWaitForSynCmd = 60*60 # 主线程等待异步请求的秒数
+        self.iSecondsReadFmServer = 10*60 # 从服务端读取数据的超时秒数
 
         (self.sServerIP, cSep, sServerPort) = sServerIPAndPort.partition(':')
         if cSep!=':':
@@ -88,11 +92,12 @@ class TCmdStringSck:
         except ValueError:
             raise CssException(2,"TCmdStringSck.sServerPort=(%s)Error" % sServerPort)
         
-        (self.sAcctIdStr, cSep, self.sEncPasswd) = sAcctIdStrEncPasswd.partition(':')
+        (self.sAcctId, cSep, self.sAcctPwd) = sAcctIdAndPwd.partition(':')
         if cSep!=':':
-            raise CssException(3,"TCmdStringSck.sAcctIdStrEncPasswd=(%s)Error" % sAcctIdStrEncPasswd)
+            raise CssException(3,"TCmdStringSck.sAcctIdAndPwd=(%s)Error" % sAcctIdAndPwd)
 
-        self.sClientDeviceInfo = sClientDeviceInfo
+        self.ynForceLogin = ynForceLogin
+        self.sClientInfo = sClientInfo #将来再补充客户端信息
 
         self.cSep = '#' #内置命令字分隔符
         self.cLoginStatus = '@'    #//登录交互状态，取值: '@'=未连接; 'L'=登录中; 'R'=交互中;
@@ -195,6 +200,7 @@ class TCmdStringSck:
         dwCmdId = dictParam.get('dwCmdId',CMDID_HREAT_BEAT)
         sCmdType = GetCmdType(dwCmdId)
         if sCmdType=='Reply': #服务端的应答
+            bDelCmd = True #是否删除请求命令。删除后表示该命令执行结束
             dwCmdId = GetCmdRequestFmReply(dwCmdId)
             sBakValue = self.m_dictCmd.get(dwCmdId,'')
             lsV = sBakValue.split(self.cSep)
@@ -203,14 +209,15 @@ class TCmdStringSck:
             if len(lsV)>=2:
                 sCmd0 = lsV[0]
                 sLogicParam = lsV[1]
-            if self.cLoginStatus=='L' and sLogicParam==CMD0_CHECK_PASSWD:
+            if self.cLoginStatus=='L' and sLogicParam==CMD0_CHECK_AUTH:
                 self.handleCmdReply_ChkPasswd(CmdStr)
             else:
-                self.OnHandleReplyCallBack(sCmd0,sLogicParam,CmdStr,dwCmdId)
-            try:
-                del self.m_dictCmd[dwCmdId]
-            except KeyError,e:
-                PrintTimeMsg("cbDealQueueDataFmServer.del(%s).Except:%s" % (dwCmdId,e))
+                bDelCmd =self.OnHandleReplyCallBack(sCmd0,sLogicParam,CmdStr,dwCmdId)
+            if bDelCmd:
+                try:
+                    del self.m_dictCmd[dwCmdId]
+                except KeyError,e:
+                    PrintTimeMsg("cbDealQueueDataFmServer.del(%s).Except:%s" % (dwCmdId,e))
         elif sCmdType=='Notify': #服务端的通知
             self.OnHandleNotifyCallBack(CmdStr,dwCmdId)
         elif sCmdType=='Request': #服务端的请求
@@ -245,8 +252,8 @@ class TCmdStringSck:
 
     def SendReqCmd_ChkPasswd(self):
         # 发送登录请求命令
-        CmdStr = (CMD0_CHECK_PASSWD,self.sAcctIdStr,self.sEncPasswd,self.sClientDeviceInfo)
-        sLogicParam = CMD0_CHECK_PASSWD
+        CmdStr = (CMD0_CHECK_AUTH,self.sP2PKind,self.sHubId, self.sAcctId,self.sAcctPwd,self.ynForceLogin,self.sClientInfo)
+        sLogicParam = CMD0_CHECK_AUTH
         self.SendRequestCmd(CmdStr, sLogicParam)
 
     def handleCmdReply_ChkPasswd(self,CmdStr):
@@ -277,6 +284,7 @@ class TCmdStringSck:
         # 供子类继承，用于接收并处理应答消息
         PrintTimeMsg("OnHandleReplyCallBack.sCmd0=%s,dwCmdId=%s,sLogicParam=%s,CmdStr=%s"
                     % (sCmd0, dwCmdId, sLogicParam, str(CmdStr)) )
+        return True
 
     def OnHandleNotifyCallBack(self,CmdStr,dwCmdId):
         # 供子类继承，用于接收并处理通知消息
@@ -290,15 +298,15 @@ class TCmdStringSck:
         return lsRetStr
 
 #--------------------------------------
-class TCmdStringSckApp(TCmdStringSck):
-    def __init__(self, sHostAndPort,sAcctIdStrEncPasswd,sClientDeviceInfo):
-        TCmdStringSck.__init__(self,sHostAndPort,sAcctIdStrEncPasswd, sClientDeviceInfo)
+class TCmdStringSckAppShr(TCmdStringSck):
+    def __init__(self, sHostAndPort,sAcctIdAndPwd,sClientInfo):
+        TCmdStringSck.__init__(self,'@HubId','SHR',sHostAndPort,sAcctIdAndPwd,'Y',sClientInfo)
 
     def LoopAndProcessLogic(self):
         iCnt = 0
         while True:
             sLogicParam = 'LogParam'+str(iCnt)
-            self.SendRequestCmd(("LmtApi.EchoCmd",'Just4Test',"python"+str(iCnt),sLogicParam),sLogicParam)
+            self.SendRequestCmd((CMD0_ECHO_CMD,'Just4Test',"python"+str(iCnt),sLogicParam),sLogicParam)
             iCnt += 1
             if iCnt==5:
                 self.SendNotifyMsg(("LmtApi.NotifyMsg",'Just4Test',"python"+str(iCnt),sLogicParam))
@@ -306,13 +314,64 @@ class TCmdStringSckApp(TCmdStringSck):
             #time.sleep(0.1)
 
     def OnHandleReplyCallBack(self,sCmd0,sLogicParam,CmdStr,dwCmdId):
-        PrintTimeMsg("TCmdStringSckApp.OnHandleReplyCallBack.sCmd0=%s,dwCmdId=%s,sLogicParam=%s,CmdStr=%s"
+        PrintTimeMsg("TCmdStringSckAppShr.OnHandleReplyCallBack.sCmd0=%s,dwCmdId=%s,sLogicParam=%s,CmdStr=%s"
                     % (sCmd0, dwCmdId, sLogicParam, str(CmdStr)) )
+        return True
 
-def TestTCmdStringSckApp():
-    cssa = TCmdStringSckApp("127.0.0.1:8888",'testCSTP:testCSTP','sClientDevInfo')
+def TestTCmdStringSckAppShr():
+    cssa = TCmdStringSckAppShr("127.0.0.1:8888",'testCSTP:testCSTP','sClientDevInfo')
+    cssa.StartMainThreadLoop()
+
+#--------------------------------------
+class TCmdStringSckAppP1(TCmdStringSck):
+    def __init__(self, sHubId,sHostAndPort,sAcctIdAndPwd,sSubffix,sClientInfo):
+        TCmdStringSck.__init__(self,sHubId,'P1'+sSubffix,sHostAndPort,sAcctIdAndPwd,'Y',sClientInfo)
+
+    def LoopAndProcessLogic(self):
+        iCnt = 0
+        while True:
+            sLogicParam = 'LogParam'+str(iCnt)
+            #self.SendRequestCmd((CMD0_ECHO_CMD,'Just4Test',"python"+str(iCnt),sLogicParam),sLogicParam)
+            iCnt += 1
+            if iCnt==5:
+                self.SendNotifyMsg(("LmtApi.NotifyMsg",'Just4Test',"python"+str(iCnt),sLogicParam))
+            if iCnt==6:
+                self.SendRequestCmd((CMD0_P2P11_SEND_CMD_TOPEER,'B','TellMeCmd','Just4TestFromA',"python"+str(iCnt),sLogicParam))
+            if iCnt==7:
+                self.SendRequestCmd((CMD0_P2P11_SEND_CMD_TOPEER,'B,B','TellMeCmd2','Just4TestFromA',"python"+str(iCnt),sLogicParam))
+            if iCnt==8:
+                self.SendRequestCmd((CMD0_P2P11_SEND_CMD_TOPEER,'*','TellMeCmd*','Just4TestFromA',"python"+str(iCnt),sLogicParam))
+            if (iCnt>=10): break #10
+            #time.sleep(0.1)
+
+    def OnHandleReplyCallBack(self,sCmd0,sLogicParam,CmdStr,dwCmdId):
+        PrintTimeMsg("TCmdStringSckAppP1.OnHandleReplyCallBack.sCmd0=%s,dwCmdId=%s,sLogicParam=%s,CmdStr=%s"
+                    % (sCmd0, dwCmdId, sLogicParam, str(CmdStr)) )
+        return True
+
+    def OnHandleNotifyCallBack(self,CmdStr,dwCmdId):
+        # 供子类继承，用于接收并处理通知消息
+        if CmdStr[0]=='!P2P11.SendSystemMsg':  #系统消息
+            self.HandleSendSystemMsg(CmdStr)
+        elif CmdStr[0]=='!P2P11.SendCmdToPeer': #点对点消息
+            self.HandleSendCmdToPeer(CmdStr)
+        else:
+            TCmdStringSck.OnHandleNotifyCallBack(self,CmdStr,dwCmdId)
+
+    def HandleSendSystemMsg(self, CmdStr):
+        PrintTimeMsg("HandleSendSystemMsg.CmdStr=%s=" % (','.join(CmdStr)) )
+
+    def HandleSendCmdToPeer(self, CmdStr):
+        sSuffixFm = CmdStr[1]
+        sSuffixTo = CmdStr[2]
+        sPeerCmd = CmdStr[3]
+        PrintTimeMsg("HandleSendCmdToPeer.CmdStr=%s=" % (','.join(CmdStr)) )
+
+def TestTCmdStringSckAppP1():
+    sHubId = 'fba008448317ea7f5c31f8e19c68fcf7'
+    cssa = TCmdStringSckAppP1(sHubId,"127.0.0.1:8888",'one:onePairA','A','sClientDevInfo')
     cssa.StartMainThreadLoop()
 #--------------------------------------
 if __name__=='__main__':
-    # TestCmdSckAsyn()
-    TestTCmdStringSckApp()
+    # TestTCmdStringSckAppShr()
+    TestTCmdStringSckAppP1()

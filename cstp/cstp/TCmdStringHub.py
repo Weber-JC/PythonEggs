@@ -20,7 +20,7 @@ CSTP(Command String List Transfer Protocol) 命令串列表传出协议
 4.客户端连接上之后，需要首先向服务端发登录指令。这里需要说明如下：
     A.客户端账号串(sAcctIdStr)是在P2P架构中作为交互访问的唯一标识；
     B.相同账号的不同设备通过在sAcctIdStr添加后缀实现；
-    C.客户端检查密码登录接口描述，参见 CHubCallbackBase.py
+    C.客户端检查密码登录接口描述，参见 CHubCallbackBasicBase.py
 
 ---------------------- 依赖包
 pip install gevent
@@ -34,37 +34,43 @@ from gevent.server import StreamServer
 # from gevent import monkey
 # monkey.patch_all()  #WeiYF.20160322 暂时打上补丁
 
-from weberFuncs import GetCurrentTime,PrintTimeMsg,\
-    CAppendLogBase, ClassForAttachAttr
+from weberFuncs import GetCurrentTime,PrintTimeMsg,md5,\
+    CAppendLogBase
 
 from CSockReadWrite import CSockReadWrite
 
-from cstpFuncs import CMDID_HREAT_BEAT,GenNewReqCmdId,IsHeartBeat,IsCmdNotify,\
-    GetCmdType, GetCmdRequestFmReply,GetCmdReplyFmRequest, CMD0_CHECK_PASSWD
+from cstpFuncs import IsHeartBeat,IsCmdNotify, GetCmdType, \
+    GetCmdRequestFmReply,GetCmdReplyFmRequest, CMD0_CHECK_AUTH
 #--------------------------------------
 class TCmdStringHub(CAppendLogBase):
-    def __init__(self, sHostName4Param, sServerIPPort, oHubCallback,
-                 sLogFileName = __file__): #WeiYF.20160427 方便于应用程序调整日志位置
+    def __init__(self, sHostName4Param, sServerIPPort, oHubCallback, sLogFileName):
+        # CSTP服务端接入框架类 TCmdStringHub
+        # sHostName4Param 以主机名为基础的参数访问标识
+        # sServerIPPort 服务端守护的 IP:Port ；其中 Port 是整数串，默认是 8888
+        #     IP默认取值为 0.0.0.0 表示服务端不绑定网卡
+        # oHubCallback Hub处理回调对象
+        # sLogFileName 日志文件参考路径，存储在该文件上一级的 log 子目录下
         CAppendLogBase.__init__(self,sLogFileName,'log')
 
         self.sHostName4Param = sHostName4Param
         self.oHubCallback = oHubCallback
 
-        self.sServerIP = '127.0.0.1'
+        self.sServerIP = '0.0.0.0'
         self.iServerPort = 8888
         lsServer = sServerIPPort.split(':')
         if len(lsServer)>=2:
             if lsServer[0]: self.sServerIP = lsServer[0]
             self.iServerPort = int(lsServer[1])
 
-        oBind = ClassForAttachAttr()
-        oBind.sSNetHubIdStr = '%s:%s' % (self.sHostName4Param,self.iServerPort)
-        oBind.sServerIPPort = '%s:%s' % (self.sServerIP,self.iServerPort)
-        self.oHubCallback.HandleServerStart(oBind)
+        PrintTimeMsg('TCmdStringHub(%s:%s).sHubId=%s' % (
+            self.sHostName4Param,self.iServerPort,self.oHubCallback.sHubId))
+
+        self.sServerIPPort = '%s:%s' % (self.sServerIP,self.iServerPort)
+        self.oHubCallback.HandleServerStart(self)
 
         # self.bTelnetTest = True
         self.bTelnetTest = False
-        self.iSecondsTimeOut = 86400
+        self.iSecondsTimeOut = 3600 #86400 #
 
         self.iMaxQueueReqNum = 5 #微线程请求队列消息积压数目
         self.fSecondsFlowCtrl = 0.0001 #流控休息秒数
@@ -98,7 +104,7 @@ class TCmdStringHub(CAppendLogBase):
 
     def cbLoopHandleQueueReply(self):
         while True:
-            (sClientIPPort,dwCmdId,CmdOStr) = self.oHubCallback.HandleCheckReply()
+            (sClientIPPort,dwCmdId,CmdOStr) = self.oHubCallback.HandleCheckAllLinkReply()
             if sClientIPPort=='': #表示没有数据
                 gevent.sleep(self.fSecondsEchoCtrl)
             else:
@@ -111,7 +117,7 @@ class TCmdStringHub(CAppendLogBase):
                         v.put([dwCmdId,CmdOStr])
                     else:
                         sMsg = 'sClientIPPort=%s,iCmdId=%s,CmdOStr=%s' % (sClientIPPort,dwCmdId,str(CmdOStr))
-                        PrintTimeMsg("TransmitCmdReplyToQueue.IgnoreReply(%s)" % (sMsg))
+                        PrintTimeMsg("cbLoopHandleQueueReply.IgnoreReply(%s)" % (sMsg))
                         self.WyfAppendToFile('HubIgnoreReply',sMsg)
                 gevent.sleep(self.fSecondsToSwitch)
 
@@ -141,17 +147,17 @@ class TCmdStringHub(CAppendLogBase):
         # 处理从链接上读取数据包
         while not oObj.bQuitLoopFlag:
             try:
-                sRet, oTuple = oObj.ReadCmdStrFromLink(15) #(self.iSecondsTimeOut)
+                sRet, oTuple = oObj.ReadCmdStrFromLink(self.iSecondsTimeOut) # 15s 调试用
                 if sRet=='OK':
-                    (dwCmdId,CmdIStr) = oTuple
+                    (dwCmdId,CmdStr) = oTuple
                     if IsHeartBeat(dwCmdId):
-                        oObj.EchoHeartBeatMsg(CmdIStr)
+                        oObj.EchoHeartBeatMsg(CmdStr)
                     else:
                         sCmdType = GetCmdType(dwCmdId)
-                        if not self.DealSpecialCmdRequest(oObj,dwCmdId,CmdIStr):
+                        if not self.DealSpecialCmdRequest(oObj,dwCmdId,CmdStr):
                             if self.queueRequest.qsize()>self.iMaxQueueReqNum: #WeiYF.20160324 进行流控，消息积压则暂缓
                                 gevent.sleep(self.fSecondsFlowCtrl) #0.0001
-                            self.queueRequest.put([oObj.GetObjIPPort(),dwCmdId,CmdIStr])
+                            self.queueRequest.put([oObj.GetObjIPPort(),dwCmdId,CmdStr])
                 elif sRet=='TimeOut':
                     oObj.SendHeartBeatMsg('0','HeartBeat TimeOut From Server')
                 else:
@@ -185,41 +191,46 @@ class TCmdStringHub(CAppendLogBase):
     def DealSpecialCmdRequest(self,oObj,dwCmdId,CmdIStr):
         #转发命令请求
         # PrintTimeMsg('TransmitCmdRequest.CmdIStr=(%s)!' % str(CmdIStr))
-        if CmdIStr[0]==CMD0_CHECK_PASSWD: # .startswith('ABLOGIN.ChkPasswd'):
+        if CmdIStr[0]==CMD0_CHECK_AUTH: # .startswith('ABLOGIN.ChkPasswd'):
             if oObj.cLoginStatus!='L':
                 CmdOStr = ['ES', #系统错误
                            '99', #错误代码
-                           'TransmitCmdRequest.Can not call (%s) after login!' % CmdIStr[0],
+                           'TransmitCmdRequest.Can not call (%s) after login!' % CMD0_CHECK_AUTH,
                            'TCmdStringHub.DealSpecialCmdRequest'] #WeiYF.20151223 返回ES，强制客户端重新登录
                 oObj.WriteCmdStrToLink(GetCmdReplyFmRequest(dwCmdId),CmdOStr)
                 oObj.SetCloseQuitFlag(sMsg)
                 return True
             else:
                 sClientIPPort = oObj.GetObjIPPort()
-                (sClientIPPort,dwCmdId,CmdOStr) = self.oHubCallback.HandleCheckPasswd(sClientIPPort,dwCmdId,CmdIStr)
+                (sClientIPPort,dwCmdId,CmdOStr) = self.oHubCallback.HandleCheckAuth(sClientIPPort,dwCmdId,CmdIStr)
                 oObj.WriteCmdStrToLink(dwCmdId,CmdOStr)
-                # if CmdOStr[0][0]=='O':
-                #     oObj.ChgLoginStatus()
                 return True
         return False
 
 def StartCmdStringHub(sHostName4Param, sServerIPPort, clsHubCallBack, tupleClsParam, sLogFileName):
-    oHubCallback = clsHubCallBack(tupleClsParam)
+    oHubCallback = clsHubCallBack(*tupleClsParam)
     c = TCmdStringHub(sHostName4Param,sServerIPPort,oHubCallback, sLogFileName)
     c.LoopAndWait()
 
 def mainCmdStringHub():
-    from CHubCallbackBase import CHubCallbackBase
-    from CHubCallbackQueue import CHubCallbackQueue
+    from CHubCallbackBasicBase import CHubCallbackBasicBase
+    from CHubCallbackQueueBase import CHubCallbackQueueBase
+    from CHubCallbackP2P11 import CHubCallbackP2P11
     sHostName4Param = 'LocalTest'
     sServerIPPort = '0.0.0.0:8888'
     sPythonDir = 'D:/WeiYFGitSrc/PythonProject/WxScanServ/ptSNetSck/'
+    # sHubId = '@HubId'
+    sHubId = md5('%s:%s:@HubId' % (sHostName4Param,sServerIPPort)) #
+    # sHubId TCmdStringHub的标识，用于一对一P2P模式中，鉴别客户端身份，避免连错主机
+    lsPairIdAllow = ['one','two']
     sDiffKeyTail = ''
-    tupleClsParam = (sDiffKeyTail,)
+    # tupleClsParam = (sHubId,lsPairIdAllow,sDiffKeyTail)
+    tupleClsParamP2P11 = (sHubId,lsPairIdAllow,)
     StartCmdStringHub(sHostName4Param,sServerIPPort,
                       # CHubCallbackBase,
-                      CHubCallbackQueue,
-                      tupleClsParam,sPythonDir+'runSNetHubRedis.py')
+                      # CHubCallbackQueueBase,
+                      CHubCallbackP2P11, tupleClsParamP2P11,
+                      sPythonDir+'runSNetHubRedis.py')
 
 #--------------------------------------
 if __name__ == '__main__':
