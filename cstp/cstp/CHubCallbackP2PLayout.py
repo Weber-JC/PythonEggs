@@ -3,19 +3,24 @@
 Created on 2016-6-16
 @author: Weber Juche
 
-从 CHubCallbackBase 继承，实现了P2P的一些基础服务
+从 CHubCallbackBase 继承，实现了 P2PLayout 模式中一些基础服务。
+
+
 
 '''
 import gevent
 from gevent.queue import Queue
 from weberFuncs import GetCurrentTime,PrintTimeMsg,PrintAndSleep
-from cstpFuncs import GetCmdReplyFmRequest,CMDID_NOTIFY_MSG,\
-    CMD0_P2P11_SEND_CMD_TOPEER,CMD0_P2P11_SEND_SYSTEM_MSG
+
+from mGlobalConst import P2PKIND_P2PLAYOUT,CHAR_SEP_P2PLAYOUT
+from cstpFuncs import GetCmdReplyFmRequest,CMDID_NOTIFY_MSG
 
 from CHubCallbackQueueBase import CHubCallbackQueueBase
 
+from mP2PLayoutConst import CMD0_P2PLAYOUT_SEND_CMD_TOPEER,CMD0_P2PLAYOUT_SEND_SYSTEM_MSG
+
 #--------------------------------------
-class CHubCallbackP2P11(CHubCallbackQueueBase):
+class CHubCallbackP2PLayout(CHubCallbackQueueBase):
     def __init__(self,sHubId, lsPairIdAllow):
         CHubCallbackQueueBase.__init__(self,sHubId)
 
@@ -38,6 +43,8 @@ class CHubCallbackP2P11(CHubCallbackQueueBase):
         dictPairPass = {
             'one.A':'onePairA',
             'one.B':'onePairB',
+            'one.C':'onePairC',
+            'one.Test':'onePairTest',
         }
         if dictPairPass.get(sPairIdSuffix,'')!=sAcctPwd:
             return False,'sPairIdSuffix=(%s) password NOT match' % sPairIdSuffix
@@ -76,52 +83,68 @@ class CHubCallbackP2P11(CHubCallbackQueueBase):
             self.SendP2P11MsgToPeerByPairId(sPairId,sSuffix,CmdIStr)
 
     def DoHandleCheckAuthP1(self, oLink, dwCmdId, sHubId,
-                            sP2PKind, sPairId, sAcctPwd, ynForceLogin, sClientInfo):
+                            sP2PKind, sAcctId, sAcctPwd, ynForceLogin, sClientInfo):
         # 处理客户端P1A/P1B鉴权，返回格式为:CmdOStr
-        sSuffix = sP2PKind[2:]
-        sErrno = '102'
-        bPass,sMsg = self.CheckPairPwdStatus(sPairId, sSuffix, sAcctPwd)
-        if bPass:
-            sPeerId = self.GetPeerIdFmPairId(sPairId, sSuffix)
-            sOldIPPort = self.dictCIPByPeerId.get(sPeerId,'')
-            if sOldIPPort=='' or ynForceLogin in 'Yy':
-                setSuffix = self.dictSuffixSetByPairId.get(sPairId,set([]))
-                setSuffix.add(sSuffix)
-                self.dictSuffixSetByPairId[sPairId] = setSuffix
-                oLink.sPeerId = sPeerId #链接对象保留 sPeerId 消息
-                oLink.sPairId = sPairId
-                oLink.sSuffix = sSuffix
-                self.dictCIPByPeerId[sPeerId] = oLink.sClientIPPort
-                PrintTimeMsg('DoHandleCheckAuthP1.dictCIPByPeerId=%s=' % str(self.dictCIPByPeerId))
-                sOnlineList = ','.join(setSuffix)
-                #发送上线通知消息
-                CmdIStr = [
-                    CMD0_P2P11_SEND_SYSTEM_MSG,
-                    'PeerOnline',     #Action
-                    sPairId,          #Pair标识
-                    sSuffix,          #Pair后缀
-                    sOnlineList,      #在线 sSuffix 列表串
-                    GetCurrentTime(), #服务器时间
-                ]
-                self.BroadcastP2P11MsgByPairId(sPairId, sSuffix, CmdIStr)
+        (sPairId, cSep, sSuffix) = sAcctId.partition(CHAR_SEP_P2PLAYOUT)
+        sErrno,sMsg = '102','DefaultError'
+        if cSep=='':
+            sErrno = '110'
+            sMsg = 'sAcctId=(%s)Format Error!' % sAcctId
+        else:
+            bPass,sMsg = self.CheckPairPwdStatus(sPairId, sSuffix, sAcctPwd)
+            if bPass:
+                sPeerId = self.GetPeerIdFmPairId(sPairId, sSuffix)
+                sOldIPPort = self.dictCIPByPeerId.get(sPeerId,'')
+                if sOldIPPort=='' or ynForceLogin in 'Yy':
+                    setSuffix = self.dictSuffixSetByPairId.get(sPairId,set([]))
+                    setSuffix.add(sSuffix)
+                    self.dictSuffixSetByPairId[sPairId] = setSuffix
+                    oLink.sPeerId = sPeerId #链接对象保留 sPeerId 消息
+                    oLink.sPairId = sPairId
+                    oLink.sSuffix = sSuffix
+                    self.dictCIPByPeerId[sPeerId] = oLink.sClientIPPort
+                    PrintTimeMsg('DoHandleCheckAuthP1.dictCIPByPeerId=%s=' % str(self.dictCIPByPeerId))
+                    sOnlineList = ','.join(setSuffix)
+                    #发送上线通知消息
+                    CmdIStr = [
+                        CMD0_P2PLAYOUT_SEND_SYSTEM_MSG,
+                        'PeerOnline',     #Action
+                        sPairId,          #Pair标识
+                        sSuffix,          #Pair后缀
+                        sOnlineList,      #在线 sSuffix 列表串
+                        GetCurrentTime(), #服务器时间
+                    ]
+                    self.BroadcastP2P11MsgByPairId(sPairId, sSuffix, CmdIStr)
 
-                CmdOStr = ['OK',
-                    sP2PKind,
-                    sHubId,
-                    sPairId,
-                    GetCurrentTime(),
-                    'sServerInfo@P2P11',
-                ]
-                return CmdOStr
-            else:
-                sErrno = '111'
-                sMsg = 'sPairId=%s,sSuffix=%s Already Login on (%s)!' % (
-                    sPairId, sSuffix, sOldIPPort)
+                    CmdOStr = ['OK',
+                        sP2PKind,
+                        sHubId,
+                        sAcctId,
+                        GetCurrentTime(),
+                        'sServerInfo@P2P11',
+                    ]
+                    return CmdOStr
+                else:
+                    sErrno = '111'
+                    sMsg = 'sPairId=%s,sSuffix=%s Already Login on (%s)!' % (
+                        sPairId, sSuffix, sOldIPPort)
         CmdOStr = ['ES',   #0=系统错误，由框架断开链接
             sErrno,        #1=错误代码
             sMsg,          #2=错误提示信息
             'CHubP2POneToOne.DoHandleCheckAuthP1', #3=错误调试信息
         ]
+        return CmdOStr
+
+    def DoHandleCheckAuth(self, oLink, dwCmdId, sHubId,
+                            sP2PKind,sAcctId, sAcctPwd, ynForceLogin, sClientInfo):
+         # 处理客户端鉴权，返回格式为: CmdOStr
+        if sP2PKind==P2PKIND_P2PLAYOUT: #.startswith('P1'):
+            CmdOStr = self.DoHandleCheckAuthP1(oLink, dwCmdId, sHubId,
+                            sP2PKind, sAcctId, sAcctPwd, ynForceLogin, sClientInfo)
+        else:
+            CmdOStr = CHubCallbackQueueBase.DoHandleCheckAuth(self,
+                            oLink, dwCmdId, sHubId, sP2PKind,
+                            sAcctId, sAcctPwd, ynForceLogin, sClientInfo)
         return CmdOStr
 
     def HandleClientEnd(self, sClientIPPort):
@@ -143,7 +166,7 @@ class CHubCallbackP2P11(CHubCallbackQueueBase):
             PrintTimeMsg('CHubCallbackP2P11.HandleClientEnd.sPeerId=(%s)Nodo!' % (sPeerId))
         CHubCallbackQueueBase.HandleClientEnd(self,sClientIPPort)
         CmdIStr = [
-            CMD0_P2P11_SEND_SYSTEM_MSG,
+            CMD0_P2PLAYOUT_SEND_SYSTEM_MSG,
             'PeerOffline',    #Action
             sPairId,          #Pair标识
             sSuffix,          #Pair后缀
@@ -152,32 +175,20 @@ class CHubCallbackP2P11(CHubCallbackQueueBase):
         ]
         self.BroadcastP2P11MsgByPairId(sPairId, sSuffix,CmdIStr)
 
-    def DoHandleCheckAuth(self, oLink, dwCmdId, sHubId,
-                            sP2PKind,sAcctId, sAcctPwd, ynForceLogin, sClientInfo):
-         # 处理客户端鉴权，返回格式为: CmdOStr
-        if sP2PKind.startswith('P1'):
-            CmdOStr = self.DoHandleCheckAuthP1(oLink, dwCmdId, sHubId,
-                            sP2PKind, sAcctId, sAcctPwd, ynForceLogin, sClientInfo)
-        else:
-            CmdOStr = CHubCallbackQueueBase.DoHandleCheckAuth(self,
-                            oLink, dwCmdId, sHubId, sP2PKind,
-                            sAcctId, sAcctPwd, ynForceLogin, sClientInfo)
-        return CmdOStr
-
     def HandleRequestCmd(self, sClientIPPort, dwCmdId, CmdIStr):
         # 处理客户端请求命令
         bDone = CHubCallbackQueueBase.HandleRequestCmd(self, sClientIPPort, dwCmdId, CmdIStr)
         if not bDone:
             sErrno = '201'
-            sMsg = '%s.Error!' % CMD0_P2P11_SEND_CMD_TOPEER
-            if CmdIStr[0]==CMD0_P2P11_SEND_CMD_TOPEER:
+            sMsg = '%s.Error!' % CMD0_P2PLAYOUT_SEND_CMD_TOPEER
+            if CmdIStr[0]==CMD0_P2PLAYOUT_SEND_CMD_TOPEER:
                 PrintTimeMsg('HandleRequestCmd.CmdIStr=(%s)!' % (','.join(CmdIStr)))
                 sSuffixFm = self.GetLinkAttrValue(sClientIPPort,'sSuffix','')
                 sSuffixTo = CmdIStr[1]
                 CmdIStr.insert(1,sSuffixFm) #将发送者插入CmdIStr[1]
                 sErrno,sMsg = self.SendP2P11MsgToPeerByCIP(sClientIPPort,sSuffixFm,sSuffixTo,CmdIStr) #原样送达
                 if sErrno=='':
-                    CmdOStr = ['OK','%s(%s)To(%s)' % (CMD0_P2P11_SEND_CMD_TOPEER,sClientIPPort,sSuffixTo)]
+                    CmdOStr = ['OK','%s(%s)To(%s)' % (CMD0_P2PLAYOUT_SEND_CMD_TOPEER,sClientIPPort,sSuffixTo)]
                 else:
                     CmdOStr = ['ES',   #0=系统错误，由框架断开链接
                         sErrno,        #1=错误代码
@@ -191,8 +202,8 @@ class CHubCallbackP2P11(CHubCallbackQueueBase):
 
 
 #--------------------------------------
-def testCHubCallbackP2PBase():
-    bhc = CHubCallbackP2PBase() #oObj
+def testMain():
+    pass
 
 if __name__=='__main__':
-    testCHubCallbackP2PBase()
+    testMain()

@@ -20,26 +20,43 @@ Created on 2016-5-31
 3=sErrorDebugMsg          ;出错调试信息，方便开发者调试。
 
 ;---------------------------
+; 2016-7-1 鉴权类型sP2PKind对应的P2P相关概念，解释如下：
+一、典型意义上P2P模式，命名为 P2PCommon 。指的是 sPeerId 是由Peer自己向服务端注册生成的，
+Peer自己创建好友关系，然后好友之间就可以直接交互，或者通过群组交互。
+
+二、预分配的P2P模式，命名为 P2PLayout 。 指的是 sPeerId不需要Peer自主注册，需要后台管理方
+提前分配 sPairId 和 sSuffix 给Peer，服务端根据sPairId和sSuffix来计算生成sPeerId。
+客户端之间是通过 <sSuffix> 相互访问的，不同PairId之间隔绝访问。
+sPeerId是计算出来的,仅用于服务端内部查找定位出客户端链接。
+    服务端部署需要填入 sHubId, 允许接入的 sPairId 列表（可能存放在数据库中）。
+    客户端部署需要填入 sHubId, sPairId, sAcctPwd 和 sSuffix 。
+
+三、共享账号模式，命名为 AcctShare 。指的是在客户端共享账号登录，适用于传统的客户端/服务器模式。
+此时服务端的主要工作之将处理客户端的请求并返回应答。不像P2P那样，会在不同客户端之间进行交互。
+
+;---------------------------
+
 客户端登录指令接口描述如下：
 [<cstpFuncs.CMD0_CHECK_AUTH>]
 @=客户端接入鉴权，同时完成P2P登录。
 @1N=1:1                   ;命令字类型;1:1/N
 #CmdIStr[n]入口:
-1=sP2PKind                ;鉴权类型，SHR=客户端可共享同一个账号鉴权，
-                          ;         P2P=P2P模式，客户端使用自己的PeerId
-                          ;         P1<sSuffix>=点对点P2P模式，其中sSuffix是互相间访问后缀标识
-                          ;         一对一约定：P1A=发起方，P1B=接收方
-                          ;sP2PKind=P2P时, sAcctNo=sPeerId, 是提前申请获得的唯一标识
-                          ;                sAcctPwd=是提前申请时自定义的访问密码；可修改
-                          ;sP2PKind=P1<Suffix>时, sAcctNo=sPairId, 是提前分配的唯一标识
-                          ;                sAcctPwd=是提前分配的访问密码；可修改
+1=sP2PKind                ;鉴权类型，取值如下（定义在 mGlobalConst.py 中）：
+                          ;     AcctShare=客户端可共享同一个账号鉴权，
+                          ;         这种模式不检查 sHubId 是否匹配；而且 ynForceLogin 参数无效；
+                          ;     P2PCommon=典型P2P模式，客户端使用自己注册的sPeerId
+                          ;         sAcctNo=sPeerId 是提前申请获得的唯一标识
+                          ;         sAcctPwd=是提前申请时自定义的访问密码；可修改
+                          ;     P2PLayout=预分配P2P模式
+                          ;         sAcctNo=sPairId:sSuffix 之间采用英文点号(.)分隔。
+                          ;             其中 sPairId 是提前分配的唯一标识
+                          ;             其中 sSuffix 是互相间访问后缀标识
+                          ;         sAcctPwd=是提前分配的访问密码；可提供修改服务
 2=sHubId                  ;服务端标识串；用于客户端识别服务端，避免连错服务器；默认为 @HubId
-                          ;sP2PKind=SHR时，不检查sHubId是否匹配。
 3=sAcctId                 ;客户端账号标识
 4=sAcctPwd                ;客户端账号密码;
 5=ynForceLogin            ;YN是否强制登录; N=非强制登录，若检测出对应账号已登录，则返回错误；
                           ;               Y=强制登录，若检测出对应账号已登录，则踢其下线。
-                          ;sP2PKind=SHR时，该参数无效。
 6=sClientInfo             ;客户端设备信息，可选
 #CmdOStr[n]成功出口
 1=sP2PKind                ;鉴权类型
@@ -49,17 +66,11 @@ Created on 2016-5-31
 5=sServerInfo             ;服务端附加信息，可选
 ;---------------------------
 
-
-点对点P2P模式中,sPeerId=sMd5PairId 是计算出来的,具体算法如下：
-    sMd5PairId = sHubId+'.'+sPairId+'.'+Suffix
-仅用于服务端内部查找定位出客户端链接；客户端之间是通过 <Suffix> 相互访问的，不同PairId之间隔绝访问。
-服务端部署需要填入 sHubId, 允许接入的 sPairId 列表（可能存放在数据库中）。
-客户端部署需要填入 sHubId, sPairId, sAcctPwd 和 sSuffix 。
-
 '''
 
 from weberFuncs import GetCurrentTime,PrintTimeMsg,PrintAndSleep,ClassForAttachAttr
 from cstpFuncs import CMDID_HREAT_BEAT, IsCmdNotify,GetCmdReplyFmRequest
+from mGlobalConst import P2PKIND_ACCTSHARE
 
 class CHubCallbackBasicBase:
     """
@@ -184,7 +195,7 @@ class CHubCallbackBasicBase:
         sAcctPwd = CmdIStr[4]
         ynForceLogin = CmdIStr[5]
         sClientInfo = CmdIStr[6]
-        if sP2PKind!='SHR' and sHubId!=self.sHubId:
+        if sP2PKind!=P2PKIND_ACCTSHARE and sHubId!=self.sHubId:
             CmdOStr = ['ES',   #0=系统错误，由框架断开链接
                 '102',         #1=错误代码
                 'sP2PKind=(%s),sHubId=(%s) not match!' % (sP2PKind,sHubId), #2=错误提示信息
@@ -208,7 +219,7 @@ class CHubCallbackBasicBase:
         # 处理客户端鉴权，返回格式为: CmdOStr
         CmdOStr = ['ES',   #0=系统错误，由框架断开链接
             '101',         #1=错误代码
-            'sAcctId or sAcctPwd error!', #2=错误提示信息
+            'sP2PKind=(%s),sAcctId or sAcctPwd error!' % sP2PKind, #2=错误提示信息
             'CHubCallbackBase.DoHandleCheckAuth', #3=错误调试信息
         ]
         return CmdOStr

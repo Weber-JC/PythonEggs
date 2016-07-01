@@ -9,7 +9,8 @@ Created on 2016-6-7
 import gevent
 from gevent.queue import Queue
 from weberFuncs import GetCurrentTime,PrintTimeMsg,PrintAndSleep,ClassForAttachAttr
-from cstpFuncs import CMD0_ECHO_CMD,GetCmdReplyFmRequest
+from cstpFuncs import GetCmdReplyFmRequest
+from mGlobalConst import CMD0_ECHO_CMD
 
 from CHubCallbackBasicBase import CHubCallbackBasicBase
 

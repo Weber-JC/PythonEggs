@@ -34,13 +34,14 @@ from gevent.server import StreamServer
 # from gevent import monkey
 # monkey.patch_all()  #WeiYF.20160322 暂时打上补丁
 
-from weberFuncs import GetCurrentTime,PrintTimeMsg,md5,\
-    CAppendLogBase
+from weberFuncs import GetCurrentTime,PrintTimeMsg,md5, CAppendLogBase
 
 from CSockReadWrite import CSockReadWrite
 
 from cstpFuncs import IsHeartBeat,IsCmdNotify, GetCmdType, \
-    GetCmdRequestFmReply,GetCmdReplyFmRequest, CMD0_CHECK_AUTH
+    GetCmdRequestFmReply,GetCmdReplyFmRequest #CMD0_CHECK_AUTH
+
+from mGlobalConst import CMD0_CHECK_AUTH
 #--------------------------------------
 class TCmdStringHub(CAppendLogBase):
     def __init__(self, sHostName4Param, sServerIPPort, oHubCallback, sLogFileName):
@@ -215,7 +216,7 @@ def StartCmdStringHub(sHostName4Param, sServerIPPort, clsHubCallBack, tupleClsPa
 def mainCmdStringHub():
     from CHubCallbackBasicBase import CHubCallbackBasicBase
     from CHubCallbackQueueBase import CHubCallbackQueueBase
-    from CHubCallbackP2P11 import CHubCallbackP2P11
+    from CHubCallbackP2PLayout import CHubCallbackP2PLayout
     sHostName4Param = 'LocalTest'
     sServerIPPort = '0.0.0.0:8888'
     sPythonDir = 'D:/WeiYFGitSrc/PythonProject/WxScanServ/ptSNetSck/'
@@ -225,11 +226,11 @@ def mainCmdStringHub():
     lsPairIdAllow = ['one','two']
     sDiffKeyTail = ''
     # tupleClsParam = (sHubId,lsPairIdAllow,sDiffKeyTail)
-    tupleClsParamP2P11 = (sHubId,lsPairIdAllow,)
+    tupleClsParamP2PLayout = (sHubId,lsPairIdAllow,)
     StartCmdStringHub(sHostName4Param,sServerIPPort,
                       # CHubCallbackBase,
                       # CHubCallbackQueueBase,
-                      CHubCallbackP2P11, tupleClsParamP2P11,
+                      CHubCallbackP2PLayout, tupleClsParamP2PLayout,
                       sPythonDir+'runSNetHubRedis.py')
 
 #--------------------------------------

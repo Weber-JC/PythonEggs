@@ -14,23 +14,6 @@ from weberFuncs import PrintTimeMsg,printHexString,printCmdString,IsUtf8String
 CMDID_HREAT_BEAT = 0x80000000 #心跳包取值
 CMDID_NOTIFY_MSG = 0          #通知消息
 
-CMD0_CHECK_AUTH = '!CSTP.CheckAuth' # 检查接入授权命令字
-CMD0_ECHO_CMD = '!CSTP.EchoCmd' # 接入框架回声命令字，能则实现
-
-# P2P11模式中，内含命令：
-CMD0_P2P11_SEND_SYSTEM_MSG = '!P2P11.SendSystemMsg' # 发送系统消息
-#  1=sAction       # PeerOnline=上线,PeerOffline=下线
-#  2=sPairId
-#  3=sSuffix
-#  4=sOnlineList   #在线 sSuffix 列表串，逗号分隔
-#  5+=其它参数
-
-CMD0_P2P11_SEND_CMD_TOPEER = '!P2P11.SendCmdToPeer' # 向同一sPairId中的其它Peer发命令请求
-#  1=sSuffixFrom   # Peer消息源，由框架程序插入
-#  2=sSuffixList   # 逗号分隔的 sSuffix；取值 * ，表示全部其它Peer
-#  3+=其它参数
-
-
 #--------------------------------------
 # 提供 CmdId 相关计算函数
 def Int8ToHex(dwInt):
@@ -239,9 +222,7 @@ def testSerialCstCmdStr():
     print Int8ToHex(dwCmdId),CmdStr
     printCmdString("test=",CmdStr)
 
-#--------------------------------------
-def GetTextPeerIdForP2P11(sPairId, sSuffix):
-    return '%s.%s' % (sPairId, sSuffix)
+
 #--------------------------------------
 def testBytes():
     s = '1234测试test'
