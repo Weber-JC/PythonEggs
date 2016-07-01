@@ -7,13 +7,16 @@ Created on 2016-7-2
     P2PLayout 模式演示用的参数配置，由 CHubCallbackP2PLayout.py 使用。
 """
 
-gsPairPassword = {
-    # P2P11 配置参数
+gDictP2PLayoutByPairId = {
+    # P2PLayout sPairId配置参数
     # 以 sPairId 为键值，内容是 sSuffix = sPassword 组成的键值对
-    'PairOne': {
-        'sSuffix': 'sPassword',
+    '@sPairId': {
+        '@sSuffix': '@sPassword',
     },
     'one': {
-        'A': 'sPassword',
+        'A': 'onePairA',
+        'B': 'onePairB',
+        'C': 'onePairC',
+        'Test': 'onePairTest',
     },
 }

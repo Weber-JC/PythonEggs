@@ -21,10 +21,11 @@ from mP2PLayoutConst import CMD0_P2PLAYOUT_SEND_CMD_TOPEER,CMD0_P2PLAYOUT_SEND_S
 
 #--------------------------------------
 class CHubCallbackP2PLayout(CHubCallbackQueueBase):
-    def __init__(self,sHubId, lsPairIdAllow):
+    def __init__(self,sHubId, dictP2PLayoutByPairId):
         CHubCallbackQueueBase.__init__(self,sHubId)
-
-        self.lsPairIdAllow = set(lsPairIdAllow) #允许接入的PairId列表
+        self.dictP2PLayoutByPairId = dictP2PLayoutByPairId
+        self.lsPairIdAllow = set(self.dictP2PLayoutByPairId.keys()) #允许接入的PairId列表
+        self.lsPairIdAllow.remove('@sPairId')
 
         self.dictCIPByPeerId = {} #以 PeerId=(sPairId+sSuffix) 为 Key 存储 sClientIPPort
         self.dictSuffixSetByPairId = {} #以 sPairId 为 Key 存储 sSuffix 的集合
@@ -38,7 +39,7 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
     def CheckPairPwdStatus(self, sPairId, sSuffix, sAcctPwd):
         # 返回 bPass, sMsg
         if sPairId not in self.lsPairIdAllow:
-            return False,'sPairId=(%s) not in lsPairIdAllow!'
+            return False,'sPairId=(%s) not in lsPairIdAllow!' % sPairId
         sPairIdSuffix = '%s.%s' % (sPairId, sSuffix)
         dictPairPass = {
             'one.A':'onePairA',

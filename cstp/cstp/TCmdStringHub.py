@@ -217,16 +217,17 @@ def mainCmdStringHub():
     from CHubCallbackBasicBase import CHubCallbackBasicBase
     from CHubCallbackQueueBase import CHubCallbackQueueBase
     from CHubCallbackP2PLayout import CHubCallbackP2PLayout
+    from demoSettingsP2PLayout import gDictP2PLayoutByPairId
     sHostName4Param = 'LocalTest'
     sServerIPPort = '0.0.0.0:8888'
     sPythonDir = 'D:/WeiYFGitSrc/PythonProject/WxScanServ/ptSNetSck/'
     # sHubId = '@HubId'
     sHubId = md5('%s:%s:@HubId' % (sHostName4Param,sServerIPPort)) #
     # sHubId TCmdStringHub的标识，用于一对一P2P模式中，鉴别客户端身份，避免连错主机
-    lsPairIdAllow = ['one','two']
-    sDiffKeyTail = ''
+    # lsPairIdAllow = ['one','two']
+    # sDiffKeyTail = ''
     # tupleClsParam = (sHubId,lsPairIdAllow,sDiffKeyTail)
-    tupleClsParamP2PLayout = (sHubId,lsPairIdAllow,)
+    tupleClsParamP2PLayout = (sHubId,gDictP2PLayoutByPairId,)
     StartCmdStringHub(sHostName4Param,sServerIPPort,
                       # CHubCallbackBase,
                       # CHubCallbackQueueBase,
