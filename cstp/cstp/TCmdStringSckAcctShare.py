@@ -3,7 +3,7 @@
 Created on 2016-6-30
 @author: Weber Juche
 
-从 TCmdStringSck 继承，实现 P2P11 的客户端。
+从 TCmdStringSck 继承，实现 AcctShare 的客户端。
 
 """
 

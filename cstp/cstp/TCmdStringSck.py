@@ -297,55 +297,9 @@ class TCmdStringSck:
         lsRetStr.extend(CmdStr)
         return lsRetStr
 
-#--------------------------------------
-from mGlobalConst import P2PKIND_P2PLAYOUT,CHAR_SEP_P2PLAYOUT
-class TCmdStringSckAppP1Test(TCmdStringSck):
-    def __init__(self, sHubId,sHostAndPort,sPairId,sSuffix,sAcctPwd,sClientInfo):
-        sAcctId = sPairId+CHAR_SEP_P2PLAYOUT+sSuffix
-        TCmdStringSck.__init__(self,sHubId,P2PKIND_P2PLAYOUT,sHostAndPort,sAcctId,sAcctPwd,'Y',sClientInfo)
+def TestTCmdStringSck():
+    pass
 
-    def LoopAndProcessLogic(self):
-        iCnt = 0
-        while True:
-            sLogicParam = 'LogParam'+str(iCnt)
-            #self.SendRequestCmd((CMD0_ECHO_CMD,'Just4Test',"python"+str(iCnt),sLogicParam),sLogicParam)
-            iCnt += 1
-            if iCnt==5:
-                self.SendNotifyMsg(("LmtApi.NotifyMsg",'Just4Test',"python"+str(iCnt),sLogicParam))
-            if iCnt==6:
-                self.SendRequestCmd((CMD0_P2PLAYOUT_SEND_CMD_TOPEER,
-                                     'B','TellMeCmdFromTest','Just4TestFromA',"python"+str(iCnt),sLogicParam))
-            if (iCnt>=10): break #10
-            #time.sleep(0.1)
-
-    def OnHandleReplyCallBack(self,sCmd0,sLogicParam,CmdStr,dwCmdId):
-        PrintTimeMsg("TCmdStringSckAppP1.OnHandleReplyCallBack.sCmd0=%s,dwCmdId=%s,sLogicParam=%s,CmdStr=%s"
-                    % (sCmd0, dwCmdId, sLogicParam, str(CmdStr)) )
-        return True
-
-    def OnHandleNotifyCallBack(self,CmdStr,dwCmdId):
-        # 供子类继承，用于接收并处理通知消息
-        if CmdStr[0]==CMD0_P2PLAYOUT_SEND_SYSTEM_MSG:  #系统消息
-            self.HandleSendSystemMsg(CmdStr)
-        elif CmdStr[0]==CMD0_P2PLAYOUT_SEND_CMD_TOPEER: #预分配消息
-            self.HandleSendCmdToPeer(CmdStr)
-        else:
-            TCmdStringSck.OnHandleNotifyCallBack(self,CmdStr,dwCmdId)
-
-    def HandleSendSystemMsg(self, CmdStr):
-        PrintTimeMsg("HandleSendSystemMsg.CmdStr=%s=" % (','.join(CmdStr)) )
-
-    def HandleSendCmdToPeer(self, CmdStr):
-        sSuffixFm = CmdStr[1]
-        sSuffixTo = CmdStr[2]
-        sPeerCmd = CmdStr[3]
-        PrintTimeMsg("HandleSendCmdToPeer.CmdStr=%s=" % (','.join(CmdStr)) )
-
-def TestTCmdStringSckAppP1():
-    sHubId = 'fba008448317ea7f5c31f8e19c68fcf7'
-    cssa = TCmdStringSckAppP1Test(sHubId,"127.0.0.1:8888",'one','Test','onePairTest','sClientDevInfo')
-    cssa.StartMainThreadLoop()
 #--------------------------------------
 if __name__=='__main__':
-    # TestTCmdStringSckAppShr()
-    TestTCmdStringSckAppP1()
+    TestTCmdStringSck()

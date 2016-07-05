@@ -22,9 +22,10 @@ CMD0_P2PLAYOUT_SEND_SYSTEM_MSG = '!P2PLayout.SendSystemMsg'
 
 # 向同一sPairId中的其它Peer发命令请求；对于接收方来说，则是通知消息
 CMD0_P2PLAYOUT_SEND_CMD_TOPEER = '!P2PLayout.SendCmdToPeer'
-#  1=sSuffixFrom   # Peer消息源，由框架程序插入
-#  2=sSuffixList   # 逗号分隔的 sSuffix；取值 * ，表示全部其它Peer
-#  3+=其它参数
+#  1=sSuffixFrom   # Peer消息源，框架程序检查调用方是否填入正确
+#  2=sSuffixList   # 逗号分隔的 sSuffix；取值 * ，表示全部其它Peer； *=群发，@=择一
+#  3+=其它参数      # WeiYF.20160705 @=择一 这种情况属于负载均衡应用中需要的，这里暂不支持。
+
 #--------------------------------------
 # def GetTextPeerIdForP2PLayout(sPairId, sSuffix):
 #     return '%s.%s' % (sPairId, sSuffix)
