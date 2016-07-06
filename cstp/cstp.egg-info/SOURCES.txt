@@ -13,6 +13,7 @@ cstp/TCmdStringSck.py
 cstp/TCmdStringSckAcctShare.py
 cstp/TCmdStringSckP2PLayout.py
 cstp/__init__.py
+cstp/cstpErrorFuncs.py
 cstp/cstpFuncs.py
 cstp/demoSettingsP2PLayout.py
 cstp/mGlobalConst.py

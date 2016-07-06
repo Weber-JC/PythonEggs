@@ -45,7 +45,7 @@ class TCmdStringSckP2PLayout(TCmdStringSck):
             #time.sleep(0.1)
         if self.sSuffix=='Test':
             self.LaunchTraverseCount()
-            self.SendRequestCmd((CMD0_P2PLAYOUT_SEND_CMD_TOPEER,self.sSuffix,'B*,A','TellMeCmd2','Just4TestFromA',"python"+str(iCnt),sLogicParam))
+            self.SendRequestCmd((CMD0_P2PLAYOUT_SEND_CMD_TOPEER,self.sSuffix,'B*,A,C,D','TellMeCmd2','Just4TestFromA',"python"+str(iCnt),sLogicParam))
 
     def OnHandleReplyCallBack(self,sCmd0,sLogicParam,CmdStr,dwCmdId):
         PrintTimeMsg("TCmdStringSckAppP1.OnHandleReplyCallBack.sCmd0=%s,dwCmdId=%s,sLogicParam=%s,CmdStr=%s"

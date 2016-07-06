@@ -17,6 +17,7 @@ gDictP2PLayoutByPairId = {
         'A': 'onePairA',
         'B': 'onePairB',
         'C': 'onePairC',
+        'D': 'onePairD',
         'Test': 'onePairTest',
     },
 }

@@ -30,6 +30,9 @@ Peer自己创建好友关系，然后好友之间就可以直接交互，或者�
 sPeerId是计算出来的,仅用于服务端内部查找定位出客户端链接。
     服务端部署需要填入 sHubId, 允许接入的 sPairId 列表（可能存放在数据库中）。
     客户端部署需要填入 sHubId, sPairId, sAcctPwd 和 sSuffix 。
+sPairId和sSuffix 编码规则：
+    一般要求是字母和数字组合，区分大小写；可以有
+    但不可以有如下字符: ~!@#$%^&*()`{}|\ ，但可以有 :;,.+-_
 
 三、共享账号模式，命名为 AcctShare 。指的是在客户端共享账号登录，适用于传统的客户端/服务器模式。
 此时服务端的主要工作之将处理客户端的请求并返回应答。不像P2P那样，会在不同客户端之间进行交互。
@@ -71,6 +74,8 @@ sPeerId是计算出来的,仅用于服务端内部查找定位出客户端链接
 from weberFuncs import GetCurrentTime,PrintTimeMsg,PrintAndSleep,ClassForAttachAttr
 from cstpFuncs import CMDID_HREAT_BEAT, IsCmdNotify,GetCmdReplyFmRequest
 from mGlobalConst import P2PKIND_ACCTSHARE
+
+from cstpErrorFuncs import CSTPError,GenErrorTuple
 
 class CHubCallbackBasicBase:
     """
@@ -196,33 +201,23 @@ class CHubCallbackBasicBase:
         ynForceLogin = CmdIStr[5]
         sClientInfo = CmdIStr[6]
         if sP2PKind!=P2PKIND_ACCTSHARE and sHubId!=self.sHubId:
-            CmdOStr = ['ES',   #0=系统错误，由框架断开链接
-                '102',         #1=错误代码
-                'sP2PKind=(%s),sHubId=(%s) not match!' % (sP2PKind,sHubId), #2=错误提示信息
-                'CHubCallbackBase.HandleCheckAuth', #3=错误调试信息
-            ]
+            CmdOStr = GenErrorTuple(CSTPError.CHECK_AUTH_HUBID,'CHubCallbackBase.HandleCheckAuth',
+                                    sP2PKind=sP2PKind, sHubId=sHubId)
         else:
             oLink = self.dictObjLinkByCIP.get(sClientIPPort,None)
             if oLink:
                 CmdOStr = self.DoHandleCheckAuth(oLink, dwCmdId,sHubId,
                                 sP2PKind, sAcctId, sAcctPwd, ynForceLogin, sClientInfo)
             else:
-                CmdOStr = ['ES',   #0=系统错误，由框架断开链接
-                    '103',         #1=错误代码
-                    'dictObjLinkByCIP.get(%s)=None!' % (sClientIPPort), #2=错误提示信息
-                    'CHubCallbackBase.HandleCheckAuth', #3=错误调试信息
-                ]
+                CmdOStr = GenErrorTuple(CSTPError.CHECK_AUTH_NO_CIP,'CHubCallbackBase.HandleCheckAuth',
+                                    sClientIPPort=sClientIPPort)
         return (sClientIPPort,GetCmdReplyFmRequest(dwCmdId),CmdOStr)
 
     def DoHandleCheckAuth(self, oLink, dwCmdId, sHubId,
                             sP2PKind, sAcctId, sAcctPwd, ynForceLogin, sClientInfo):
         # 处理客户端鉴权，返回格式为: CmdOStr
-        CmdOStr = ['ES',   #0=系统错误，由框架断开链接
-            '101',         #1=错误代码
-            'sP2PKind=(%s),sAcctId or sAcctPwd error!' % sP2PKind, #2=错误提示信息
-            'CHubCallbackBase.DoHandleCheckAuth', #3=错误调试信息
-        ]
-        return CmdOStr
+        return GenErrorTuple(CSTPError.CHECK_AUTH_P2PKIND,'CHubCallbackBase.DoHandleCheckAuth',
+                             sP2PKind=sP2PKind)
 
     def HandleCheckAllLinkReply(self):
         # 检查所有链接的应答返还消息（包括通知消息）等，返回格式为: (sClientIPPort,dwCmdId,CmdOStr)
