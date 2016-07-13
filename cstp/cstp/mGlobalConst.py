@@ -13,7 +13,16 @@ Created on 2016-7-1
 
 #---------------------------------
 CMD0_CHECK_AUTH = '!CSTP.CheckAuth' # 检查接入授权命令字
+# 入口参数，请参见 CHubCallbackBasicBase.py 说明
+#
 CMD0_ECHO_CMD = '!CSTP.EchoCmd' # 接入框架回声命令字，能则实现
+#
+#
+CMD0_KICK_OFFLINE = '!CSTP.KickOffLine' # 踢下线
+# CmdIStr[n]入口:
+#   1=sClientIPPortA        ;踢下线的发起方的IPPort
+#   2=sClientIPPortB        ;被踢下线的一方的IPPort
+#   3=sReasonDesc           ;被踢原因说明
 
 #sP2PKind 取值
 P2PKIND_ACCTSHARE = 'AcctShare'

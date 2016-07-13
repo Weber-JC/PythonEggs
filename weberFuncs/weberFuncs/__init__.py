@@ -18,5 +18,7 @@ from WyfPublicFuncs import RequestsHttpGet,RequestsHttpPost
 
 from WyfPublicFuncs import ClassForAttachAttr
 
+from CSendSMTPMail import CSendSMTPMail
+
 if __name__ == '__main__':
     pass

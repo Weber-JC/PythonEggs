@@ -24,6 +24,5 @@ cstp/testTCmdStringSckP2PLayout2.py
 cstp.egg-info/PKG-INFO
 cstp.egg-info/SOURCES.txt
 cstp.egg-info/dependency_links.txt
-cstp.egg-info/requires.txt
 cstp.egg-info/top_level.txt
 cstp.egg-info/zip-safe

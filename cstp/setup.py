@@ -22,7 +22,7 @@ def loadLongDesc(fname):
 setup(
     name = "cstp", #包的名字
     packages = ["cstp"], #包含的包，可以多个，这是一个列表
-    version = "0.0.6", #当前包的版本，这个按你自己需要的版本控制方式来
+    version = "0.0.16", #当前包的版本，这个按你自己需要的版本控制方式来
 
     keywords = "public weberFuncs weber", #关于当前包的一些关键字，方便PyPI进行分类。
     author = "Weber Juche", # 包的作者
@@ -47,8 +47,9 @@ setup(
     include_package_data=True,    
 
     install_requires=[
-        "gevent",
-        "weberFuncs",
+        # WeiYF.20160707 为避免本地安装时强制更新，这里不列入依赖。
+        # "gevent",
+        # "weberFuncs",
     ], # 所依赖的PyPi包
     # dependency_links=['http://github.com/user/repo/tarball/master#egg=package-1.0'] # 非PyPi包
 )

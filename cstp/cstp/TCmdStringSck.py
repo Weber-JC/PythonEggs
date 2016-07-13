@@ -261,8 +261,8 @@ class TCmdStringSck:
             raise CssException(12,'handleCmdReply_ChkPasswd.Error=%s!' % (CmdStr))
         if CmdStr[0][0]=='O': #string下标从0开始
             self.cLoginStatus = 'R'#进入交互状态
-            if len(CmdStr)>=3:
-                PrintTimeMsg('handleCmdReply_ChkPasswd.OK(%s).TimeNow=(%s)' % (CmdStr[1],CmdStr[2]))
+            if len(CmdStr)>=6:
+                PrintTimeMsg('handleCmdReply_ChkPasswd(%s)OK,TimeNow=(%s)' % (CmdStr[3],CmdStr[4]))
         else:
             raise CssException(13,'handleCmdReply_ChkPasswd.Error=(%s)' % (','.join(CmdStr)))
 

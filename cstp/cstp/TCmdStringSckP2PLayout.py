@@ -6,17 +6,18 @@ Created on 2016-6-30
 从 TCmdStringSck 继承，实现 P2P11 的客户端。
 
 """
-
+import sys
 from weberFuncs import PrintTimeMsg, GetCurrentTime, PrintAndSleep, printCmdString
 from mGlobalConst import CMD0_ECHO_CMD,P2PKIND_P2PLAYOUT,CHAR_SEP_P2PLAYOUT
 from TCmdStringSck import TCmdStringSck
 from mP2PLayoutConst import CMD0_P2PLAYOUT_SEND_SYSTEM_MSG,CMD0_P2PLAYOUT_SEND_CMD_TOPEER
 
+#-------------------------------------------------
+# 参见 mP2PLayoutConst.py 说明：
 # 基于 CMD0_P2PLAYOUT_SEND_CMD_TOPEER 遍历报数请求
 CMD3_P2PLAYOUT_TRAVERSE_COUNT = 'TraverseCount'
 #  4=iCountValueNow  # 当前报数结果
 #  5=sSuffixDoneList # 已经完成报数的 sSuffix 列表串，逗号分隔
-
 #-------------------------------------------------
 class TCmdStringSckP2PLayout(TCmdStringSck):
 
@@ -28,24 +29,20 @@ class TCmdStringSckP2PLayout(TCmdStringSck):
         TCmdStringSck.__init__(self,sHubId,P2PKIND_P2PLAYOUT,sHostAndPort,sAcctId,sAcctPwd,'Y',sClientInfo)
 
     def LoopAndProcessLogic(self):
-        iCnt = 0
-        while True:
-            sLogicParam = 'LogParam'+str(iCnt)
-            #self.SendRequestCmd((CMD0_ECHO_CMD,'Just4Test',"python"+str(iCnt),sLogicParam),sLogicParam)
-            iCnt += 1
-            # if iCnt==5:
-            #     self.SendNotifyMsg(("LmtApi.NotifyMsg",'Just4Test',"python"+str(iCnt),sLogicParam))
-            # if iCnt==6:
-            #     self.SendRequestCmd((CMD0_P2PLAYOUT_SEND_CMD_TOPEER,'B','TellMeCmd','Just4TestFromA',"python"+str(iCnt),sLogicParam))
-            # if iCnt==7:
-            #     self.SendRequestCmd((CMD0_P2PLAYOUT_SEND_CMD_TOPEER,'B,B','TellMeCmd2','Just4TestFromA',"python"+str(iCnt),sLogicParam))
-            # if iCnt==8:
-            #     self.SendRequestCmd((CMD0_P2PLAYOUT_SEND_CMD_TOPEER,'*','TellMeCmd*','Just4TestFromA',"python"+str(iCnt),sLogicParam))
-            if (iCnt>=10): break #10
-            #time.sleep(0.1)
-        if self.sSuffix=='Test':
-            self.LaunchTraverseCount()
-            self.SendRequestCmd((CMD0_P2PLAYOUT_SEND_CMD_TOPEER,self.sSuffix,'B*,A,C,D','TellMeCmd2','Just4TestFromA',"python"+str(iCnt),sLogicParam))
+        iLoopCnt = 0
+        while not self.gef.IsExitFlagTrue():
+            if self.sSuffix=='Test':
+                self.TestLaunchTraverseCount(iLoopCnt)
+            iLoopCnt += 1
+            PrintAndSleep(1,'TCmdStringSckP2PLayout.LoopAndProcessLogic.iLoopCnt=%d' % iLoopCnt,
+                          iLoopCnt%600==1) #10分钟打印一次日志
+
+    def TestLaunchTraverseCount(self,iLoopCnt):
+        self.LaunchTraverseCount()
+        sLogicParam = 'LogParam'+str(iLoopCnt)
+        self.SendRequestP2PLayoutCmd('B*,A,C,D',['TellMeCmd2','Just4TestFromA',"python"+str(iLoopCnt)],sLogicParam)
+        self.SendRequestP2PLayoutCmd('A',['SendNotifyMail','weiyf1225@qq.com',
+                                          '标题title','内容Content','sFromTitle测试'],sLogicParam)
 
     def OnHandleReplyCallBack(self,sCmd0,sLogicParam,CmdStr,dwCmdId):
         PrintTimeMsg("TCmdStringSckAppP1.OnHandleReplyCallBack.sCmd0=%s,dwCmdId=%s,sLogicParam=%s,CmdStr=%s"
@@ -63,7 +60,7 @@ class TCmdStringSckP2PLayout(TCmdStringSck):
 
     def HandleSendSystemMsg(self, CmdStr):
         self.sSuffixOnlineList = CmdStr[4]
-        PrintTimeMsg("HandleSendSystemMsg.CmdStr=%s=" % (','.join(CmdStr)) )
+        # PrintTimeMsg("HandleSendSystemMsg.CmdStr=%s=" % (','.join(CmdStr)) )
 
     def SendRequestP2PLayoutCmd(self, sSuffixTarget, CmdStr, sLogicParam):
         # 发送P2PLayout请求命令，格式参见 mP2PLayoutConst.py
@@ -72,21 +69,21 @@ class TCmdStringSckP2PLayout(TCmdStringSck):
         printCmdString('SendRequestP2PLayoutCmd=',CmdIStr)
         self.SendRequestCmd(CmdIStr,sLogicParam)
 
-    # def SendRequestP2PLayoutCmdTraverseCount(self, CmdStr, sLogicParam):
-    #     # 发送P2PLayout请求命令，格式参见 mP2PLayoutConst.py
-    #     CmdIStr = [CMD3_P2PLAYOUT_TRAVERSE_COUNT,self.sSuffix]
-    #     CmdIStr.append(CmdStr)
-    #     self.SendRequestCmd(CmdIStr,sLogicParam)
-
     def HandleSendCmdToPeer(self, CmdStr):
         sSuffixFm = CmdStr[1]
         sSuffixTo = CmdStr[2]
         sPeerCmd = CmdStr[3]
         if sPeerCmd==CMD3_P2PLAYOUT_TRAVERSE_COUNT:
-            self.DoTraverseCount(CmdStr)
-        PrintTimeMsg("HandleSendCmdToPeer.CmdStr=%s=" % (','.join(CmdStr)) )
+            self.DoTraverseCount(sSuffixFm,sSuffixTo,sPeerCmd,CmdStr)
+        else:
+            self.DoHandleSendCmdToPeer(sSuffixFm,sSuffixTo,sPeerCmd,CmdStr)
 
-    def DoTraverseCount(self, CmdStr):
+    def DoHandleSendCmdToPeer(self, sSuffixFm,sSuffixTo,sPeerCmd,CmdStr):
+        # 返回 True 表示已经处理过
+        PrintTimeMsg("DoHandleSendCmdToPeer.CmdStr=%s=" % (','.join(CmdStr)) )
+        return False
+
+    def DoTraverseCount(self, sSuffixFm,sSuffixTo,sPeerCmd,CmdStr):
         iCountValueNow = int(CmdStr[4])
         self.sSuffixDoneList = CmdStr[5]
         lsSuffixDone = self.sSuffixDoneList.split(',')
@@ -123,10 +120,57 @@ class TCmdStringSckP2PLayout(TCmdStringSck):
                                 str(iCountValueNow),
                                 self.sSuffix,),'sLogicParam')
 
+#--------------------------------------
 def TestTCmdStringSckP2PLayout():
     sHubId = 'fba008448317ea7f5c31f8e19c68fcf7'
     cssa = TCmdStringSckP2PLayout(sHubId,"127.0.0.1:8888",'one','Test','onePairTest','sClientDevInfo')
     cssa.StartMainThreadLoop()
+
+#--------------------------------------
+# WeiYF.20160708 将启动过程封装为一个共享函数，其中 dictPeerByParam 格式如下：
+# gDictPeerByParam = {
+#    # CSTP Peer运行参数，以 sHostName4Param 为键值
+#     'LocalTest': {  #本地环境  #sHostName4Param
+#         'sIPPort': '127.0.0.1:8888',
+#         'sHubId': 'fba008448317ea7f5c31f8e19c68fcf7',
+#         'sPairId': 'one',
+#         'Wait2SendMail' :{  # sAppId
+#             'sSuffix': 'A',
+#             'sAcctPwd': 'onePairA',
+#             'sClientInfo': 'sClientDevInfo',
+#         },
+#     },
+# }
+#
+def StartCmdStringSckP2PLayout(dictPeerByParam, sHostName4Param, sAppId, clsSckP2PLayout):
+    dictParam = dictPeerByParam.get(sHostName4Param,{})
+    if not dictParam:
+        PrintTimeMsg('StartCmdStringSckP2PLayout.get(%s)={}' % sHostName4Param)
+        sys.exit(-1)
+    dictApp = dictParam.get(sAppId,{})
+    if not dictApp:
+        PrintTimeMsg('StartCmdStringSckP2PLayout.get(%s)From(%s)={}' % (sAppId, str(dictParam)))
+        sys.exit(-1)
+    sIPPort = dictParam.get('sIPPort', '')
+    sHubId = dictParam.get('sHubId', '')
+    sPairId = dictParam.get('sPairId', '')
+    sSuffix = dictApp.get('sSuffix', '')
+    sAcctPwd = dictApp.get('sAcctPwd', '')
+    sClientInfo = dictApp.get('sClientInfo', '')
+    if sIPPort and sHubId and sPairId and sSuffix:
+        cssa = clsSckP2PLayout(sHubId,sIPPort,sPairId,sSuffix,sAcctPwd,sClientInfo)
+        cssa.StartMainThreadLoop()
+    else:
+        sErrMsg = ''
+        if not sIPPort: sErrMsg += 'sIPPort,'
+        if not sHubId: sErrMsg += 'sHubId,'
+        if not sPairId: sErrMsg += 'sPairId,'
+        if not sSuffix: sErrMsg += 'sSuffix,'
+        sErrMsg = '(%s) is null' % sErrMsg[:-1] #剔除最后一个逗号
+        PrintTimeMsg('StartCmdStringSckP2PLayout.sErrMsg=%s!' % (sErrMsg))
+        sys.exit(-1)
+
+
 #--------------------------------------
 if __name__=='__main__':
     TestTCmdStringSckP2PLayout()

@@ -6,6 +6,7 @@ Created on 2016-6-7
 从 CHubCallbackBase 继承，借助 Queue 实现后台业务逻辑
 
 '''
+import sys
 import gevent
 from gevent.queue import Queue
 from weberFuncs import GetCurrentTime,PrintTimeMsg,PrintAndSleep,ClassForAttachAttr

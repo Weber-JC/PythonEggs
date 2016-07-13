@@ -6,7 +6,7 @@ Created on 2016-6-16
 从 CHubCallbackBase 继承，实现了 P2PLayout 模式中一些基础服务。
 
 '''
-
+import sys
 from weberFuncs import GetCurrentTime,PrintTimeMsg,PrintAndSleep
 
 from mGlobalConst import P2PKIND_P2PLAYOUT,CHAR_SEP_P2PLAYOUT
@@ -14,6 +14,7 @@ from cstpFuncs import GetCmdReplyFmRequest,CMDID_NOTIFY_MSG
 from cstpErrorFuncs import CSTPError,GenErrorTuple,GenOkMsgTuple
 from CHubCallbackQueueBase import CHubCallbackQueueBase
 
+from mGlobalConst import CMD0_KICK_OFFLINE
 from mP2PLayoutConst import CMD0_P2PLAYOUT_SEND_CMD_TOPEER,CMD0_P2PLAYOUT_SEND_SYSTEM_MSG
 
 #--------------------------------------
@@ -65,6 +66,7 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
         sWhereMsg = 'CHubCallbackP2PLayout.BroadcastP2PMsgToSuffixSet'
         CmdOStrRet = GenOkMsgTuple(sWhereMsg)
         iSndCnt = 0
+        PrintTimeMsg('BroadcastP2PMsgToSuffixSet.setSuffix=%s=' % str(setSuffix))
         for sSuffix in setSuffix:
             CmdOStr = self.SendP2PMsgToPeerByPairId(sPairId,sSuffix,CmdIStr)
             if CmdOStr[0]!='OK' and CmdOStrRet[0]=='OK':# 仅记录首个错误
@@ -129,6 +131,10 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
                 sPeerId = self.GetPeerIdFmPairId(sPairId, sSuffix)
                 sOldIPPort = self.dictCIPByPeerId.get(sPeerId,'')
                 if sOldIPPort=='' or ynForceLogin in 'Yy':
+                    if sOldIPPort:
+                        sReasonDesc = 'sP2PKind=%s,sPairId=%s,ynForceLogin=%s' % (sP2PKind,sPairId,ynForceLogin)
+                        csKickOffline = [CMD0_KICK_OFFLINE, oLink.sClientIPPort, sOldIPPort, sReasonDesc]
+                        self.PutCmdStrToReturnQueue([sOldIPPort,CMDID_NOTIFY_MSG,csKickOffline])
                     setSuffix = self.dictSuffixSetByPairId.get(sPairId,set([]))
                     setSuffix.add(sSuffix)
                     self.dictSuffixSetByPairId[sPairId] = setSuffix
@@ -173,19 +179,22 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
         return CmdOStr
 
     def HandleClientEnd(self, sClientIPPort):
+        bKickOff = self.GetLinkAttrValue(sClientIPPort,'bKickOff',False)
+        if bKickOff:
+            PrintTimeMsg("HandleClientEnd.sClientIPPort=(%s)bKickOff=True!" % (sClientIPPort))
         sOnlineList = ''
         sPairId = self.GetLinkAttrValue(sClientIPPort,'sPairId','')
         sSuffix = self.GetLinkAttrValue(sClientIPPort,'sSuffix','')
         if sPairId!='' and sSuffix!='':
             setSuffix = self.dictSuffixSetByPairId.get(sPairId,set([]))
-            setSuffix.remove(sSuffix)
+            if bKickOff:  setSuffix.remove(sSuffix)
             self.dictSuffixSetByPairId[sPairId] = setSuffix
             sOnlineList = ','.join(setSuffix)
         else:
             PrintTimeMsg('CHubCallbackP2PLayout.HandleClientEnd.sPairId=(%s),sSuffix=(%s)Nodo!' % (sPairId,sSuffix))
         sPeerId = self.GetLinkAttrValue(sClientIPPort,'sPeerId','')
         if sPeerId:
-            del self.dictCIPByPeerId[sPeerId]
+            if bKickOff:  del self.dictCIPByPeerId[sPeerId]
             PrintTimeMsg('CHubCallbackP2PLayout.HandleClientEnd.sPeerId=(%s),del(%s)!' % (sPeerId,sClientIPPort))
         else:
             PrintTimeMsg('CHubCallbackP2PLayout.HandleClientEnd.sPeerId=(%s)Nodo!' % (sPeerId))
@@ -218,7 +227,7 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
 
     def DoP2PLayoutSendCmdToPeer(self, sClientIPPort, dwCmdId, CmdIStr):
         # 向同一sPairId中的其它Peer发命令请求
-        PrintTimeMsg('DoP2PLayoutSendCmdToPeer.CmdIStr=(%s)!' % (','.join(CmdIStr)))
+        # PrintTimeMsg('DoP2PLayoutSendCmdToPeer.CmdIStr=(%s)!' % (','.join(CmdIStr)))
         sSuffixFm = self.GetLinkAttrValue(sClientIPPort,'sSuffix','')
         if sSuffixFm==CmdIStr[1]:
             sListSuffixTo = CmdIStr[2]

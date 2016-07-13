@@ -17,15 +17,17 @@ class CSTPError:
     '''
     EE = 'EE'
     ES = 'ES'
-    CHECK_AUTH_DEFAULT = 10000
-    CHECK_AUTH_P2PKIND = 10001
-    CHECK_AUTH_HUBID = 10002
-    CHECK_AUTH_NO_CIP = 10003
-    CHECK_AUTH_P2P_PAIRID_1 = 10011
-    CHECK_AUTH_P2P_PAIRID_2 = 10012
-    CHECK_AUTH_P2P_SUFFIX_PWD = 10013
-    CHECK_AUTH_P2P_ACCTID_FMT = 10014
-    CHECK_AUTH_P2P_ALREADY_ON = 10015
+    CHECK_AUTH_DEFAULT = 10010
+    CHECK_AUTH_P2PKIND = 10011
+    CHECK_AUTH_HUBID = 10012
+    CHECK_AUTH_NO_CIP = 10013
+    CHECK_AUTH_CMD_SEQ = 10014
+    CHECK_AUTH_KICK_OFFLINE = 10015
+    CHECK_AUTH_P2P_PAIRID_1 = 10021
+    CHECK_AUTH_P2P_PAIRID_2 = 10022
+    CHECK_AUTH_P2P_SUFFIX_PWD = 10023
+    CHECK_AUTH_P2P_ACCTID_FMT = 10024
+    CHECK_AUTH_P2P_ALREADY_ON = 10025
     P2P_SEND_MSG_NO_SUPPORT_0 = 10100
     P2P_SEND_MSG_CIP_NO_PAIRID = 10101
     P2P_SEND_MSG_CIP_NOT_FOUND = 10102
@@ -36,6 +38,8 @@ class CSTPError:
         CHECK_AUTH_P2PKIND : (ES,'sP2PKind={sP2PKind},sAcctId or sAcctPwd error!',),
         CHECK_AUTH_HUBID : (ES,'sP2PKind={sP2PKind},sHubId={sHubId} not match!',),
         CHECK_AUTH_NO_CIP : (ES,'dictObjLinkByCIP.get({sClientIPPort})=None!',),
+        CHECK_AUTH_CMD_SEQ : (ES,'Can not call ({cmd0}) after login!',),
+        CHECK_AUTH_KICK_OFFLINE : (ES,'({sClientIPPortB}) kicked offline by ({sClientIPPortA}) , sReasonDesc=({sReasonDesc})',),
         CHECK_AUTH_P2P_PAIRID_1 : (ES,'sPairId=({sPairId}) not in lsPairIdAllow!',),
         CHECK_AUTH_P2P_PAIRID_2 : (ES,'sPairId=({sPairId}) NOT found!',),
         CHECK_AUTH_P2P_SUFFIX_PWD : (ES,'sSuffix=({sSuffix}).password NOT match!',),

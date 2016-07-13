@@ -71,6 +71,7 @@ sPairId和sSuffix 编码规则：
 
 '''
 
+import sys
 from weberFuncs import GetCurrentTime,PrintTimeMsg,PrintAndSleep,ClassForAttachAttr
 from cstpFuncs import CMDID_HREAT_BEAT, IsCmdNotify,GetCmdReplyFmRequest
 from mGlobalConst import P2PKIND_ACCTSHARE
@@ -118,6 +119,14 @@ class CHubCallbackBasicBase:
         # 设置退出标记
         self.bQuitLoopFlag = True
 
+    def SetKickOffFlagTrue(self, sClientIPPort):
+        # 设置踢出标记
+        PrintTimeMsg("SetKickOffFlagTrue(%s)..." % (sClientIPPort))
+        oLink = self.dictObjLinkByCIP.get(sClientIPPort,None)
+        if oLink:
+            oLink.bKickOff = True
+            PrintTimeMsg("SetKickOffFlagTrue(%s)!" % (sClientIPPort))
+
     def GetHubAttrValue(self, sAttrName, sDefValue=''):
         # 根据属性名称，从 oBind.oHub 读取相关属性取值
         if sDefValue=='@':
@@ -148,14 +157,16 @@ class CHubCallbackBasicBase:
             self.sHubId, self.GetHubAttrValue('sServerIPPort','@')))
         self.oBind = None
 
-    def HandleClientBegin(self, sClientIPPort):
+    def HandleClientBegin(self, sClientIPPort, sock):
         # 处理客户端开启事件
         self.oBind.iNowLinkNum += 1
         oLink = ClassForAttachAttr()
         oLink.sClientIPPort = sClientIPPort
+        oLink.sock = sock
         oLink.iNotifyMsgNum = 0
         oLink.iRequestCmdNum = 0
         oLink.iReplyCmdNum = 0
+        oLink.bKickOff = False #是否被踢下线
         self.dictObjLinkByCIP[sClientIPPort] = oLink
         #WeiYF.20160627 暂时不考虑 sClientIPPort 重复问题
         PrintTimeMsg("HandleClientBegin(%s).iNowLinkNum=%d=" % (
@@ -185,7 +196,7 @@ class CHubCallbackBasicBase:
         oLink = self.dictObjLinkByCIP.get(sClientIPPort,None)
         if oLink:
             oLink.iRequestCmdNum += 1
-            PrintTimeMsg("HandleRequestCmd.Fm(%s)=%s=" % (sClientIPPort, ','.join(CmdIStr) ))
+            # PrintTimeMsg("HandleRequestCmd.Fm(%s)=%s=" % (sClientIPPort, ','.join(CmdIStr) ))
             return False
         else:
             PrintTimeMsg("HandleRequestCmd.Fm(%s).oLink=%s=" % (sClientIPPort, str(oLink) ))
@@ -242,7 +253,7 @@ def testCHubCallbackBasicBase():
     bhc.HandleServerStart(oBind)
     print 0, bhc.GetLinkAttrValue('sClientIPPort')
     sClientIPPort = 'sClientIP:8888'
-    bhc.HandleClientBegin(sClientIPPort)
+    bhc.HandleClientBegin(sClientIPPort,None)
     print 1, bhc.GetLinkAttrValue('sClientIPPort')
     bhc.HandleClientEnd(sClientIPPort)
     print 2, bhc.GetLinkAttrValue('sClientIPPort')

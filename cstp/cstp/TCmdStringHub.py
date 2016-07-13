@@ -41,7 +41,8 @@ from CSockReadWrite import CSockReadWrite
 from cstpFuncs import IsHeartBeat,IsCmdNotify, GetCmdType, \
     GetCmdRequestFmReply,GetCmdReplyFmRequest #CMD0_CHECK_AUTH
 
-from mGlobalConst import CMD0_CHECK_AUTH
+from mGlobalConst import CMD0_CHECK_AUTH,CMD0_KICK_OFFLINE
+from cstpErrorFuncs import CSTPError,GenErrorTuple
 #--------------------------------------
 class TCmdStringHub(CAppendLogBase):
     def __init__(self, sHostName4Param, sServerIPPort, oHubCallback, sLogFileName):
@@ -124,7 +125,7 @@ class TCmdStringHub(CAppendLogBase):
 
     def __handleOneConnection(self, sock, client_addr):
         sClientIPPort = '%s:%s' % (client_addr[0],client_addr[1])
-        self.oHubCallback.HandleClientBegin(sClientIPPort)
+        self.oHubCallback.HandleClientBegin(sClientIPPort,sock)
 
         PrintTimeMsg("__handleOneConnection.sock=(%s)..." % str(sock))
         oObj = CSockReadWrite(sock,'S')
@@ -177,6 +178,7 @@ class TCmdStringHub(CAppendLogBase):
             dwCmdId,CmdOStr = q.get()
             oObj.WriteCmdStrToLink(dwCmdId,CmdOStr)
             gevent.sleep(self.fSecondsToSwitch)
+            self.DealSpecialCmdReply(oObj,dwCmdId,CmdOStr)
         self.__hubQuitAndFreeLink(oObj,'__handleClientWrite.END')
 
     def __hubQuitAndFreeLink(self, oObj, sHint):
@@ -190,22 +192,34 @@ class TCmdStringHub(CAppendLogBase):
             PrintTimeMsg("__hubQuitAndFreeLink(%s)ForReason=%s" % (sObjIPPort,sHint))
 
     def DealSpecialCmdRequest(self,oObj,dwCmdId,CmdIStr):
-        #转发命令请求
-        # PrintTimeMsg('TransmitCmdRequest.CmdIStr=(%s)!' % str(CmdIStr))
+        # 处理特殊命令请求
+        # PrintTimeMsg('DealSpecialCmdRequest.CmdIStr=(%s)!' % str(CmdIStr))
         if CmdIStr[0]==CMD0_CHECK_AUTH: # .startswith('ABLOGIN.ChkPasswd'):
             if oObj.cLoginStatus!='L':
-                CmdOStr = ['ES', #系统错误
-                           '99', #错误代码
-                           'TransmitCmdRequest.Can not call (%s) after login!' % CMD0_CHECK_AUTH,
-                           'TCmdStringHub.DealSpecialCmdRequest'] #WeiYF.20151223 返回ES，强制客户端重新登录
+                CmdOStr = GenErrorTuple(CSTPError.CHECK_AUTH_CMD_SEQ,'TCmdStringHub.DealSpecialCmdRequest',
+                                    cmd0=CMD0_CHECK_AUTH)
                 oObj.WriteCmdStrToLink(GetCmdReplyFmRequest(dwCmdId),CmdOStr)
-                oObj.SetCloseQuitFlag(sMsg)
-                return True
+                oObj.SetCloseQuitFlag('DealSpecialCmdRequest.CMD0_CHECK_AUTH')
             else:
                 sClientIPPort = oObj.GetObjIPPort()
                 (sClientIPPort,dwCmdId,CmdOStr) = self.oHubCallback.HandleCheckAuth(sClientIPPort,dwCmdId,CmdIStr)
                 oObj.WriteCmdStrToLink(dwCmdId,CmdOStr)
-                return True
+            return True
+        return False
+
+    def DealSpecialCmdReply(self,oObj,dwCmdId,CmdOStr):
+        # 处理特殊命令应答
+        # PrintTimeMsg('DealSpecialCmdReply.CmdIStr=(%s)!' % str(CmdIStr))
+        if CmdOStr[0]==CMD0_KICK_OFFLINE: #被踢出
+            sClientIPPortA = CmdOStr[1]
+            sClientIPPortB = CmdOStr[2]
+            sReasonDesc = CmdOStr[3]
+            CmdOStr = GenErrorTuple(CSTPError.CHECK_AUTH_KICK_OFFLINE,'TCmdStringHub.DealSpecialCmdReply',
+                    sClientIPPortA=sClientIPPortA, sClientIPPortB=sClientIPPortB, sReasonDesc=sReasonDesc)
+            oObj.WriteCmdStrToLink(dwCmdId,CmdOStr)
+            oObj.SetCloseQuitFlag('DealSpecialCmdReply.CMD0_KICK_OFFLINE')
+            self.oHubCallback.SetKickOffFlagTrue(sClientIPPortB)
+            return True
         return False
 
 def StartCmdStringHub(sHostName4Param, sServerIPPort, clsHubCallBack, tupleClsParam, sLogFileName):

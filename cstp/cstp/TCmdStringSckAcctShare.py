@@ -6,7 +6,7 @@ Created on 2016-6-30
 从 TCmdStringSck 继承，实现 AcctShare 的客户端。
 
 """
-
+import sys
 from weberFuncs import PrintTimeMsg, GetCurrentTime, PrintAndSleep
 from mGlobalConst import CMD0_ECHO_CMD,P2PKIND_ACCTSHARE
 from TCmdStringSck import TCmdStringSck
