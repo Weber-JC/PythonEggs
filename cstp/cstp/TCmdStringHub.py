@@ -184,7 +184,7 @@ class TCmdStringHub(CAppendLogBase):
     def __hubQuitAndFreeLink(self, oObj, sHint):
         if not oObj.bQuitLoopFlag:
             oObj.SetCloseQuitFlag(sHint)
-            self.oHubCallback.SetCloseQuitFlag(sHint)
+            self.oHubCallback.SetCallBackQuitFlag(sHint)
         if oObj.ChkFirstDoQuitEnd():
             sObjIPPort = oObj.GetObjIPPort()
             self.oHubCallback.HandleClientEnd(sObjIPPort)

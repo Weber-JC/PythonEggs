@@ -72,10 +72,10 @@ sPairId和sSuffix 编码规则：
 '''
 
 import sys
-from weberFuncs import GetCurrentTime,PrintTimeMsg,PrintAndSleep,ClassForAttachAttr
+from weberFuncs import GetCurrentTime,PrintTimeMsg,PrintAndSleep,ClassForAttachAttr,\
+    WyfAppendToFile, GetSystemPlatform
 from cstpFuncs import CMDID_HREAT_BEAT, IsCmdNotify,GetCmdReplyFmRequest
 from mGlobalConst import P2PKIND_ACCTSHARE
-
 from cstpErrorFuncs import CSTPError,GenErrorTuple
 
 class CHubCallbackBasicBase:
@@ -112,16 +112,22 @@ class CHubCallbackBasicBase:
         self.bQuitLoopFlag = False  # 循环控制变量，由主控程序赋值
         self.sSelfHubId = ''
 
+        sFNLogClient = 'logClientOnOff.txt'
+        self.sFNameLogClient = '/tmp/'+sFNLogClient
+        if GetSystemPlatform()=='Windows':
+            self.sFNameLogClient = 'D:\\'+sFNLogClient
+        PrintTimeMsg("CHubCallbackBasicBase.sFNameLogClient=(%s)!" % (self.sFNameLogClient))
+
     def __del__(self):
         pass
 
-    def SetCloseQuitFlag(self,sHint):
+    def SetCallBackQuitFlag(self,sHint):
         # 设置退出标记
         self.bQuitLoopFlag = True
 
     def SetKickOffFlagTrue(self, sClientIPPort):
         # 设置踢出标记
-        PrintTimeMsg("SetKickOffFlagTrue(%s)..." % (sClientIPPort))
+        # PrintTimeMsg("SetKickOffFlagTrue(%s)..." % (sClientIPPort))
         oLink = self.dictObjLinkByCIP.get(sClientIPPort,None)
         if oLink:
             oLink.bKickOff = True
@@ -171,6 +177,7 @@ class CHubCallbackBasicBase:
         #WeiYF.20160627 暂时不考虑 sClientIPPort 重复问题
         PrintTimeMsg("HandleClientBegin(%s).iNowLinkNum=%d=" % (
             sClientIPPort, self.oBind.iNowLinkNum))
+        WyfAppendToFile(self.sFNameLogClient,'%s=On' % sClientIPPort)
 
     def HandleClientEnd(self, sClientIPPort):
         # 处理客户端结束事件
@@ -179,6 +186,7 @@ class CHubCallbackBasicBase:
         # delattr(self.oLink,'sClientIPPort')
         PrintTimeMsg("HandleClientEnd(%s).iNowLinkNum=%d=" % (
             sClientIPPort, self.oBind.iNowLinkNum))
+        WyfAppendToFile(self.sFNameLogClient,'%s=Off' % sClientIPPort)
 
     def HandleNotifyMsg(self, sClientIPPort, CmdIStr):
         # 处理客户端通知消息，返回bDone=True表示已处理，bDone=False表示未处理

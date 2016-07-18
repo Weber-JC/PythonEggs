@@ -19,6 +19,7 @@ cstp/demoSettingsP2PLayout.py
 cstp/mGlobalConst.py
 cstp/mP2PLayoutConst.py
 cstp/testTCmdStringSckP2PLayout0.py
+cstp/testTCmdStringSckP2PLayout00.py
 cstp/testTCmdStringSckP2PLayout1.py
 cstp/testTCmdStringSckP2PLayout2.py
 cstp.egg-info/PKG-INFO

@@ -10,7 +10,7 @@ import smtplib
 from email.MIMEText import MIMEText
 from email.MIMEMultipart import MIMEMultipart
 
-from WyfPublicFuncs import PrintTimeMsg
+from WyfPublicFuncs import PrintTimeMsg,CatchExcepExitTuple,CatchExcepExitParam
 
 class CSendSMTPMail:
     def __init__(self,sSMTPHost, sAccoutFull, sPassword):
@@ -27,7 +27,7 @@ class CSendSMTPMail:
     def __del__(self):
         pass
 
-    def SendMail(self, sToEMail, sSubject, sContent, sFromTitle='缺省身份'):
+    def __sendMail(self, sToEMail, sSubject, sContent, sFromTitle):
         """
             发送邮件
             :param sToEMail: 目标email，多个email可以采用英文分号分开
@@ -36,6 +36,7 @@ class CSendSMTPMail:
             :param sFromTitle: 发件人名称，utf-8编码
             :return: 无
         """
+        # print 'sFromTitle', sFromTitle
         msg = MIMEMultipart()
         msg['From'] = sFromTitle.decode('utf-8').encode("gbk","ignore") + "<%s>" % (self.sAccoutFull) #
         sSubject = sSubject.decode('utf-8').encode("gbk","ignore")
@@ -45,7 +46,10 @@ class CSendSMTPMail:
         msg.attach(txt)
 
         # send email
-        smtp = smtplib.SMTP(self.sSMTPHost)
+        if self.sMailHost.upper() in ['QQ.COM']: #QQ邮箱要采用SSL登录
+            smtp = smtplib.SMTP_SSL('smtp.qq.com', timeout=30)#连接smtp邮件服务器,端口默认是25
+        else:
+            smtp = smtplib.SMTP(self.sSMTPHost)
         # smtp.set_debuglevel(1) #会打印邮件发送日志
         smtp.login(self.sAccout,self.sPassword)
         for sTo in sToEMail.split(';'):
@@ -54,9 +58,20 @@ class CSendSMTPMail:
         smtp.quit()
         PrintTimeMsg('SendMail.sToEMail(%s) successfully!' % sToEMail)
 
+    def SendMail(self, bThread, sToEMail, sSubject, sContent, sFromTitle='缺省身份'):
+        # CatchExcepExitTuple('SendMail',self.__sendMail, (sToEMail, sSubject, sContent, sFromTitle))
+        CatchExcepExitParam(bThread,'SendMail',self.__sendMail, sToEMail, sSubject, sContent, sFromTitle=sFromTitle)
+        return
+
 def testCSendSMTPMail():
     # c = CSendSMTPMail('smtp.163.com', 'xxx@163.com', 'xxx')
     #c.SendMail('weiyf1225@139.com', 'Python Email测试邮件，不是垃圾邮件','This is contents这是内容，用于短信通知')
+    #c = CSendSMTPMail('smtp.qq.com', '2328083881@qq.com', '***')
+    c = CSendSMTPMail('smtp.139.com', 'weiyf1225@139.com', 'xxx')
     c.SendMail('weiyf1225@qq.com', 'Python Email测试邮件，不是垃圾邮件','This is contents这是内容，用于微信通知','测试身份')
+
+
+#-----------------------------------------
 if __name__ == "__main__":
     testCSendSMTPMail()
+    # testQQMail()

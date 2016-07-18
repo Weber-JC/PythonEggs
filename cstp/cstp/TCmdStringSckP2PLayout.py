@@ -27,26 +27,31 @@ class TCmdStringSckP2PLayout(TCmdStringSck):
         self.sSuffixOnlineList = ''   #当前在线后缀列表
         sAcctId = sPairId+CHAR_SEP_P2PLAYOUT+sSuffix
         TCmdStringSck.__init__(self,sHubId,P2PKIND_P2PLAYOUT,sHostAndPort,sAcctId,sAcctPwd,'Y',sClientInfo)
+        self.iOneSecondClock = 0
 
     def LoopAndProcessLogic(self):
-        iLoopCnt = 0
         while not self.gef.IsExitFlagTrue():
-            if self.sSuffix=='Test':
-                self.TestLaunchTraverseCount(iLoopCnt)
-            iLoopCnt += 1
-            PrintAndSleep(1,'TCmdStringSckP2PLayout.LoopAndProcessLogic.iLoopCnt=%d' % iLoopCnt,
-                          iLoopCnt%600==1) #10分钟打印一次日志
+            self.DoLoopOneSecondLogic()
 
-    def TestLaunchTraverseCount(self,iLoopCnt):
+    def DoLoopOneSecondLogic(self):
+        self.iOneSecondClock += 1
+        PrintAndSleep(1,'DoLoopOneSecondLogic.iOneSecondClock=%d' % self.iOneSecondClock,
+                        self.iOneSecondClock%600==1) #10分钟打印一次日志
+        if self.sSuffix=='Test':
+            self.TestLaunchTraverseCount(self.iOneSecondClock)
+        pass
+
+    def TestLaunchTraverseCount(self, iLoopCnt):
         self.LaunchTraverseCount()
-        sLogicParam = 'LogParam'+str(iLoopCnt)
+        sLogicParam = 'LogParam@'+str(iLoopCnt)
         self.SendRequestP2PLayoutCmd('B*,A,C,D',['TellMeCmd2','Just4TestFromA',"python"+str(iLoopCnt)],sLogicParam)
         self.SendRequestP2PLayoutCmd('A',['SendNotifyMail','weiyf1225@qq.com',
                                           '标题title','内容Content','sFromTitle测试'],sLogicParam)
 
     def OnHandleReplyCallBack(self,sCmd0,sLogicParam,CmdStr,dwCmdId):
-        PrintTimeMsg("TCmdStringSckAppP1.OnHandleReplyCallBack.sCmd0=%s,dwCmdId=%s,sLogicParam=%s,CmdStr=%s"
-                    % (sCmd0, dwCmdId, sLogicParam, str(CmdStr)) )
+        #WeiYF.20150715 为避免日志过多，暂时不打印
+        # PrintTimeMsg("TCmdStringSckP2PLayout.OnHandleReplyCallBack.sCmd0=%s,dwCmdId=%s,sLogicParam=%s,CmdStr=%s"
+        #             % (sCmd0, dwCmdId, sLogicParam, str(CmdStr)) )
         return True
 
     def OnHandleNotifyCallBack(self,CmdStr,dwCmdId):
@@ -66,7 +71,8 @@ class TCmdStringSckP2PLayout(TCmdStringSck):
         # 发送P2PLayout请求命令，格式参见 mP2PLayoutConst.py
         CmdIStr = [CMD0_P2PLAYOUT_SEND_CMD_TOPEER,self.sSuffix, sSuffixTarget]
         CmdIStr.extend(CmdStr)
-        printCmdString('SendRequestP2PLayoutCmd=',CmdIStr)
+        # printCmdString('TCmdStringSckP2PLayout.SendRequestP2PLayoutCmd=',CmdIStr)
+        # WeiYF.20160715 为避免日志过多
         self.SendRequestCmd(CmdIStr,sLogicParam)
 
     def HandleSendCmdToPeer(self, CmdStr):

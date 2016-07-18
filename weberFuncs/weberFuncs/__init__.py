@@ -12,13 +12,15 @@ from WyfPublicFuncs import PrintInline,PrintNewline,PrintTimeMsg,PrintMsTimeMsg,
 
 from WyfPublicFuncs import GetRandomInteger,ConvertStringToInt32,GetCodeFmString,crc32,md5,md5file
 
-from WyfPublicFuncs import GetSrcParentPath,GetCriticalMsgLog,CAppendLogBase
+from WyfPublicFuncs import GetSrcParentPath,GetCriticalMsgLog,CAppendLogBase,WyfAppendToFile
 
 from WyfPublicFuncs import RequestsHttpGet,RequestsHttpPost
 
 from WyfPublicFuncs import ClassForAttachAttr
+from WyfPublicFuncs import GetSystemPlatform
 
 from CSendSMTPMail import CSendSMTPMail
+from CSerialJson import CSerialJson
 
 if __name__ == '__main__':
     pass

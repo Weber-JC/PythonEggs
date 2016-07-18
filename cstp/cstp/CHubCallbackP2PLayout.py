@@ -128,6 +128,7 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
         else:
             CmdOStr = self.CheckPairPwdStatus(sPairId, sSuffix, sAcctPwd)
             if CmdOStr[0]=='OK': #bPass:
+                PrintTimeMsg('DoHandleCheckAuthP1.*******.dictCIPByPeerId=%s=' % str(self.dictCIPByPeerId))
                 sPeerId = self.GetPeerIdFmPairId(sPairId, sSuffix)
                 sOldIPPort = self.dictCIPByPeerId.get(sPeerId,'')
                 if sOldIPPort=='' or ynForceLogin in 'Yy':
@@ -187,14 +188,14 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
         sSuffix = self.GetLinkAttrValue(sClientIPPort,'sSuffix','')
         if sPairId!='' and sSuffix!='':
             setSuffix = self.dictSuffixSetByPairId.get(sPairId,set([]))
-            if bKickOff:  setSuffix.remove(sSuffix)
+            if not bKickOff:  setSuffix.remove(sSuffix)
             self.dictSuffixSetByPairId[sPairId] = setSuffix
             sOnlineList = ','.join(setSuffix)
         else:
             PrintTimeMsg('CHubCallbackP2PLayout.HandleClientEnd.sPairId=(%s),sSuffix=(%s)Nodo!' % (sPairId,sSuffix))
         sPeerId = self.GetLinkAttrValue(sClientIPPort,'sPeerId','')
         if sPeerId:
-            if bKickOff:  del self.dictCIPByPeerId[sPeerId]
+            if not bKickOff:  del self.dictCIPByPeerId[sPeerId]
             PrintTimeMsg('CHubCallbackP2PLayout.HandleClientEnd.sPeerId=(%s),del(%s)!' % (sPeerId,sClientIPPort))
         else:
             PrintTimeMsg('CHubCallbackP2PLayout.HandleClientEnd.sPeerId=(%s)Nodo!' % (sPeerId))

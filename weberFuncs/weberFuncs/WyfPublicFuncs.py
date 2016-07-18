@@ -207,12 +207,23 @@ class CAppendLogBase:
         self.cmLog.log(sTagFN, sMsg)
 
 
+def WyfAppendToFile(sFullPathFNameOut,sMsg):
+    # 直接追加方式输出到文件
+    with open(sFullPathFNameOut,"a") as f: #追加模式输出
+        sS = "[%s]%s\n" % (GetCurrentTime(),sMsg)
+        f.write(sS)
+
 class ClassForAttachAttr:
     """
         WeiYF.20151029 为了更好设置保存动态属性，引入的类
     """
     def __init__(self):
         pass
+
+def GetSystemPlatform():
+    # 返回当前操作系统类型
+    import platform
+    return platform.system()
 #--------------------------------------
 
 def Include(filename):
@@ -222,6 +233,28 @@ def Include(filename):
     if os.path.exists(filename):
         execfile(filename)
 
+
+def CatchExcepExitTuple(bThread, sHint, callbackFunc, tupleCallbackParam):
+    # 采用元组方式传入参数，调用回调函数，出现异常则退出程序
+    try:
+        return callbackFunc(*tupleCallbackParam)
+    except Exception, e:
+        import sys,traceback,os
+        traceback.print_exc() #WeiYF.20151022 打印异常整个堆栈 这个对于动态加载非常有用
+        PrintTimeMsg('%s.Exception={%s}EXIT!' % (sHint,str(e)))
+        if bThread: os._exit(-1)
+        else: sys.exit(-1)
+
+def CatchExcepExitParam(bThread, sHint, callbackFunc, *args, **kwargs):
+    # 顺序传入原有参数，调用回调函数，出现异常则退出程序
+    try:
+        return callbackFunc(*args, **kwargs)
+    except Exception, e:
+        import sys,traceback,os
+        traceback.print_exc() #WeiYF.20151022 打印异常整个堆栈 这个对于动态加载非常有用
+        PrintTimeMsg('%s.Exception={%s}EXIT!' % (sHint,str(e)))
+        if bThread: os._exit(-1)
+        else: sys.exit(-1)
 #-------------------------------------------------------
 def GetCodeFmString(sStr, cSep=' '):
     # 从 "Code Value" 格式串中拆分出 Code 和 Value
