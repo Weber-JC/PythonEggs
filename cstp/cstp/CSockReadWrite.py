@@ -133,8 +133,10 @@ class CSockReadWrite:
         sData = SerialCstCmdStrToString(dwCmdId,CmdStr,True)
         try:
             self.sock.sendall(sData)
+            return True
         except socket.error,e:
             self.SetCloseQuitFlag("Error sending data:%s!" % str(e))
+            return False
 
     def SendHeartBeatMsg(self, sReasonCode, sReasonDesc):
         #发送心跳包请求到链接上

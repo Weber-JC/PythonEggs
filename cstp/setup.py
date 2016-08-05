@@ -22,7 +22,7 @@ def loadLongDesc(fname):
 setup(
     name = "cstp", #包的名字
     packages = ["cstp"], #包含的包，可以多个，这是一个列表
-    version = "0.0.24", #当前包的版本，这个按你自己需要的版本控制方式来
+    version = "0.0.33", #当前包的版本，这个按你自己需要的版本控制方式来
 
     keywords = "public weberFuncs weber", #关于当前包的一些关键字，方便PyPI进行分类。
     author = "Weber Juche", # 包的作者

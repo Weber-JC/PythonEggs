@@ -15,5 +15,8 @@ from TCmdStringSck import TCmdStringSck,CssException
 from TCmdStringSckAcctShare import TCmdStringSckAcctShare
 from TCmdStringSckP2PLayout import TCmdStringSckP2PLayout,StartCmdStringSckP2PLayout
 
+from TCmdPipeServer import TCmdPipeServer
+from TCmdPipeClient import TCmdPipeClient
+
 if __name__ == '__main__':
     pass
