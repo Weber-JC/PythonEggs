@@ -50,6 +50,7 @@ class TCmdPipeServer:
                         self.HandlePipeRequest(CmdStr)
                     else:
                         PrintTimeMsg("LoopAndWaitPipe.Error=%s,%s!" % (sRet,sMsg))
+                        self.HandlePipeError(sRet,sMsg)
                         break
                 except Exception, e:
                     import traceback
@@ -66,10 +67,14 @@ class TCmdPipeServer:
         sClientIPPort = '%s:%s' % (address[0],address[1])
         PrintTimeMsg("AcceptOneClient.sClientIPPort=%s!" % (sClientIPPort))
         self.sockRW = CSockReadWrite(connection,'S')
+        self.sockRW.bVerbosePrintCmdStr = False
         self.sockRW.SetObjIPPort(sClientIPPort)
         self.sockRW.cLoginStatus = 'R' #默认就是运行状态
 
     def HandlePipeRequest(self, CmdStr):
+        pass
+
+    def HandlePipeError(self, sRet, sMsg):
         pass
 
 def mainCmdPipeServer():

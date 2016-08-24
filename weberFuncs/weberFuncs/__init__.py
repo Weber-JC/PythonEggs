@@ -20,7 +20,11 @@ from WyfPublicFuncs import ClassForAttachAttr
 from WyfPublicFuncs import GetSystemPlatform
 
 from CSendSMTPMail import CSendSMTPMail
+from CSendCustomMsgWX import CSendCustomMsgWX
+
 from CSerialJson import CSerialJson
+
+from SimpleShiftEncDec import SimpleShiftEncode,SimpleShiftDecode
 
 if __name__ == '__main__':
     pass

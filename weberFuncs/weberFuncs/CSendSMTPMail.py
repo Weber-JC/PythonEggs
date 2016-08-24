@@ -59,7 +59,7 @@ class CSendSMTPMail:
         PrintTimeMsg('SendMail.sToEMail(%s) successfully!' % sToEMail)
 
     def SendMail(self, bThread, sToEMail, sSubject, sContent, sFromTitle='缺省身份'):
-        # CatchExcepExitTuple('SendMail',self.__sendMail, (sToEMail, sSubject, sContent, sFromTitle))
+        # CatchExcepExitTuple(bThread,'SendMail',self.__sendMail, (sToEMail, sSubject, sContent, sFromTitle))
         CatchExcepExitParam(bThread,'SendMail',self.__sendMail, sToEMail, sSubject, sContent, sFromTitle=sFromTitle)
         return
 

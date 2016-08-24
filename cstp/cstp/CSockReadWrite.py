@@ -44,6 +44,8 @@ class CSockReadWrite:
         self.sObjIPPort = 'IP:Port' # 目标IP和端口号，
 
         self.iHeartBeatReqCnt = 0   # 心跳包请求计数
+
+        self.bVerbosePrintCmdStr = True # 是否打印CmdStr数组
         pass
 
     def __del__(self):
@@ -114,7 +116,8 @@ class CSockReadWrite:
             return sRet,'ReadCmdStrFromLink.Head(%s)' % (listHead)
         # printHexString("RcvDataFromClient.head",listHead)
         (dwCmdId,dwDataLen) = SerialCstpHeadFmString(''.join(listHead))
-        PrintTimeMsg('ReadCmdStrFromLink.dwCmdId=%d,dwDataLen=%d' % (dwCmdId,dwDataLen) )
+        if self.bVerbosePrintCmdStr:
+            PrintTimeMsg('ReadCmdStrFromLink.dwCmdId=%d,dwDataLen=%d' % (dwCmdId,dwDataLen) )
         if self.charCS=='S' and self.cLoginStatus=='L':
             if not IsCmdRequest(dwCmdId):
                 return 'Error','ReadCmdStrFromLink.Only receive RequestCmd in Login Stage!'
@@ -122,7 +125,8 @@ class CSockReadWrite:
         if sRet!='OK':
             return sRet,'ReadCmdStrFromLink.Data(%s)' % (listData)
         CmdStr = SerialCmdStrFmString(''.join(listData))
-        printCmdString("ReadCmdStrFromLink",CmdStr)
+        if self.bVerbosePrintCmdStr:
+            printCmdString("ReadCmdStrFromLink",CmdStr)
         return sRet,(dwCmdId,CmdStr)
 
     def WriteCmdStrToLink(self, dwCmdId, CmdStr):
@@ -130,7 +134,7 @@ class CSockReadWrite:
         if self.charCS=='S' and self.cLoginStatus=='L':
             if CmdStr[0][0]=='O': #登录成功后
                 self.ChgLoginStatus()
-        sData = SerialCstCmdStrToString(dwCmdId,CmdStr,True)
+        sData = SerialCstCmdStrToString(dwCmdId,CmdStr,self.bVerbosePrintCmdStr)
         try:
             self.sock.sendall(sData)
             return True

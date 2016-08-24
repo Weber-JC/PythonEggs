@@ -34,6 +34,7 @@ class TCmdPipeClient:
         self.clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.clientsocket.connect((self.sServerIP,self.iServerPort))
         self.sockRW = CSockReadWrite(self.clientsocket,'C')
+        self.sockRW.bVerbosePrintCmdStr = False
         self.sockRW.SetObjIPPort(self.sServerIPPort)
         PrintTimeMsg("ConnectToServer(%s).pid=(%s)" % (self.sServerIPPort,os.getpid()))
 

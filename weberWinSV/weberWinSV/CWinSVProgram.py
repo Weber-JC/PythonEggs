@@ -62,8 +62,8 @@ class CWinSVProgram:
         self.fdErr = None
         self.Process = None #当前在运行的进程对象
 
-        # self.bVerbose = False
-        self.bVerbose = True
+        self.bVerbose = False
+        # self.bVerbose = True #WeiYF.20160818 减少日志
 
     def __del__(self):
         self.__closeFd()

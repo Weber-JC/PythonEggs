@@ -22,7 +22,7 @@ def loadLongDesc(fname):
 setup(
     name = "weberWinSV", #包的名字
     packages = ["weberWinSV"], #包含的包，可以多个，这是一个列表
-    version = "0.0.6", #当前包的版本，这个按你自己需要的版本控制方式来
+    version = "0.0.7", #当前包的版本，这个按你自己需要的版本控制方式来
 
     keywords = "Supervisor for Windows weber", #关于当前包的一些关键字，方便PyPI进行分类。
     author = "Weber Juche", # 包的作者

@@ -69,7 +69,7 @@ class CWinSupervisor:
                 PrintTimeMsg("LoopAndWatchPrograms#%d.iStart=%s,iStop=%s!" % (
                     iLoopCnt,iStart,iStop))
             PrintAndSleep(self.iCheckIntervalSeconds,
-                          "StartCRepeatRunOneCmd.iLoopCnt=%s=" % (iLoopCnt), iLoopCnt%10 == 0)
+                          "LoopAndWatchPrograms.iLoopCnt=%s=" % (iLoopCnt), iLoopCnt%10 == 0)
 
 #--------------------------------------
 def StartCWinSupervisor(srcfile, sPythonFileName, sDictVarName, sLongIdStr):
