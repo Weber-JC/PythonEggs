@@ -80,7 +80,7 @@ class CStartLoopThread(Thread):
     def __init__(self, gef, cbLoopRun):
         self.gef = gef
         self.cbLoopRun = cbLoopRun
-        Thread.__init__(self, name = 'ThreadRead')
+        Thread.__init__(self, name = 'CStartLoopThread')
         self.setDaemon(True)
 
     def run(self): #Overwrite run() method, put what you want the thread do here

@@ -69,6 +69,13 @@ def PrintAndSleep(sleepSeconds, sHint, bVerbose=True):
         PrintTimeMsg("%s.sleep(%ss)..." % (sHint,sleepSeconds))
     time.sleep(sleepSeconds)
 
+def LoopPrintSleep(sleepSeconds, iPrintCount, sHint):
+    iLoopCnt = 0
+    while True:
+        PrintAndSleep(sleepSeconds,'%s.iLoopCnt=%s' % (sHint,iLoopCnt),
+                      iLoopCnt%iPrintCount==0)
+        iLoopCnt += 1
+
 def GetTimeInteger():
     return int(time.time())
 

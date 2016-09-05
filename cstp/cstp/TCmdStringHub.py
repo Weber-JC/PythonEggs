@@ -45,7 +45,8 @@ from mGlobalConst import CMD0_CHECK_AUTH,CMD0_KICK_OFFLINE
 from cstpErrorFuncs import CSTPError,GenErrorTuple
 #--------------------------------------
 class TCmdStringHub(CAppendLogBase):
-    def __init__(self, sHostName4Param, sServerIPPort, oHubCallback, sLogFileName):
+    def __init__(self, sHostName4Param, sServerIPPort, oHubCallback,
+                 sLogFileName, bVerbosePrintCmdStr = True):
         # CSTP服务端接入框架类 TCmdStringHub
         # sHostName4Param 以主机名为基础的参数访问标识
         # sServerIPPort 服务端守护的 IP:Port ；其中 Port 是整数串，默认是 8888
@@ -53,6 +54,7 @@ class TCmdStringHub(CAppendLogBase):
         # oHubCallback Hub处理回调对象
         # sLogFileName 日志文件参考路径，存储在该文件上一级的 log 子目录下
         CAppendLogBase.__init__(self,sLogFileName,'log')
+        self.bVerbosePrintCmdStr = bVerbosePrintCmdStr
 
         self.sHostName4Param = sHostName4Param
         self.oHubCallback = oHubCallback
@@ -130,6 +132,7 @@ class TCmdStringHub(CAppendLogBase):
         PrintTimeMsg("__handleOneConnection.sock=(%s)..." % str(sock))
         oObj = CSockReadWrite(sock,'S')
         oObj.SetObjIPPort(sClientIPPort)
+        oObj.bVerbosePrintCmdStr = self.bVerbosePrintCmdStr
 
         # self.BroadcastToClients('System','## joined from %s.' % (oObj.GetObjIPPort()))
         # self.WyfAppendToFile('GeventClient','%s.SNetClientJoin' % oObj.sClientIPPort)
@@ -222,9 +225,10 @@ class TCmdStringHub(CAppendLogBase):
             return True
         return False
 
-def StartCmdStringHub(sHostName4Param, sServerIPPort, clsHubCallBack, tupleClsParam, sLogFileName):
+def StartCmdStringHub(sHostName4Param, sServerIPPort, clsHubCallBack, tupleClsParam,
+                      sLogFileName, bVerbosePrintCmdStr = True):
     oHubCallback = clsHubCallBack(*tupleClsParam)
-    c = TCmdStringHub(sHostName4Param,sServerIPPort,oHubCallback, sLogFileName)
+    c = TCmdStringHub(sHostName4Param,sServerIPPort,oHubCallback, sLogFileName, bVerbosePrintCmdStr)
     c.LoopAndWait()
 
 def mainCmdStringHub():

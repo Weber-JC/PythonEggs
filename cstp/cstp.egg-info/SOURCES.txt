@@ -8,12 +8,15 @@ cstp/CHubCallbackQueueBase.py
 cstp/CQueueThread.py
 cstp/CRedisSNetFuncs.py
 cstp/CSockReadWrite.py
+cstp/CssException.py
 cstp/TCmdPipeClient.py
 cstp/TCmdPipeServer.py
+cstp/TCmdPipeServerTCBQ.py
 cstp/TCmdStringHub.py
 cstp/TCmdStringSck.py
 cstp/TCmdStringSckAcctShare.py
 cstp/TCmdStringSckP2PLayout.py
+cstp/TCmdStringSckP2PLayoutPipe.py
 cstp/__init__.py
 cstp/cstpErrorFuncs.py
 cstp/cstpFuncs.py

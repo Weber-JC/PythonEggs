@@ -13,8 +13,9 @@ from TCmdStringSck import TCmdStringSck
 
 #--------------------------------------
 class TCmdStringSckAcctShare(TCmdStringSck):
-    def __init__(self, sHostAndPort,sAcctId,sAcctPwd,sClientInfo):
-        TCmdStringSck.__init__(self,'@HubId',P2PKIND_ACCTSHARE,sHostAndPort,sAcctId,sAcctPwd,'Y',sClientInfo)
+    def __init__(self, sHostAndPort,sAcctId,sAcctPwd,sClientInfo, bVerbosePrintCmdStr = True):
+        TCmdStringSck.__init__(self,'@HubId',P2PKIND_ACCTSHARE,sHostAndPort,sAcctId,sAcctPwd,'Y',
+                               sClientInfo, bVerbosePrintCmdStr)
 
     def LoopAndProcessLogic(self):
         iCnt = 0

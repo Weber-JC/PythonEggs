@@ -34,6 +34,7 @@ from weberFuncs import PrintTimeMsg,PrintAndSleep,printHexString,printCmdString,
     GetCurrentTime#,GetTimeInteger,md5
 
 #-------------------------------------------------
+from CssException import CssException,gef
 from CGlobalExitFlag import CGlobalExitFlag
 from CQueueThread import CQueueObject,CQueueThread,CStartLoopThread
 
@@ -45,36 +46,14 @@ from mP2PLayoutConst import CMD0_P2PLAYOUT_SEND_SYSTEM_MSG,CMD0_P2PLAYOUT_SEND_C
 
 from CSockReadWrite import CSockReadWrite
 
+
 #-------------------------------------------------
-import signal
-gef = CGlobalExitFlag()
-def SetGlobalFlagToQuit(errno):
-    global gef
-    gef.SetExitFlagTrue("SetGlobalFlagToQuit.errno=%d" % errno)
-    sys.exit(errno)
-
-def sig_handler(signum, frame):
-    global gef
-    gef.SetExitFlagTrue("receive a signal %d" % signum)
-
-signal.signal(signal.SIGINT, sig_handler)
-signal.signal(signal.SIGTERM, sig_handler)
-#-------------------------------------------------
-class CssException(Exception):
-    def __init__(self, errno, errmsg):
-        global gef
-        self.errno = errno
-        self.errmsg = errmsg
-        gef.SetExitFlagTrue('CssException')
-
-    def __str__(self):
-        return 'CssException.errno=%s,errmsg=%s' % (repr(self.errno),repr(self.errmsg))
-
 class TCmdStringSck:
     """
         封装异步通讯 TCmdStringSck 基类。应用类从该类继承
     """
-    def __init__(self, sHubId, sP2PKind, sServerIPAndPort, sAcctId, sAcctPwd, ynForceLogin, sClientInfo):
+    def __init__(self, sHubId, sP2PKind, sServerIPAndPort, sAcctId, sAcctPwd, ynForceLogin,
+                 sClientInfo, bVerbosePrintCmdStr = True):
         global gef
         self.gef = gef
         self.sck = None
@@ -98,6 +77,7 @@ class TCmdStringSck:
 
         self.ynForceLogin = ynForceLogin
         self.sClientInfo = sClientInfo #将来再补充客户端信息
+        self.bVerbosePrintCmdStr = bVerbosePrintCmdStr
 
         self.cSep = '#' #内置命令字分隔符
         self.cLoginStatus = '@'    #//登录交互状态，取值: '@'=未连接; 'L'=登录中; 'R'=交互中;
@@ -120,6 +100,7 @@ class TCmdStringSck:
         sServerIPPort = '%s:%s' % (self.sServerIP,self.iServerPort)
         self.oObj = CSockReadWrite(self.sck,'C')
         self.oObj.SetObjIPPort(sServerIPPort)
+        self.oObj.bVerbosePrintCmdStr = self.bVerbosePrintCmdStr
 
         self.QueueSend = CQueueObject('Send')
         self.QueueRecv = CQueueObject('Recv')
@@ -138,7 +119,7 @@ class TCmdStringSck:
         self.TerminateMainThread('QUIT')
 
     def TerminateMainThread(self, sHint):
-        gef.SetExitFlagTrue(sHint)
+        self.gef.SetExitFlagTrue(sHint)
         if hasattr(self,'oObj'):
             self.oObj.SetCloseQuitFlag(sHint)
 
@@ -151,46 +132,56 @@ class TCmdStringSck:
                 iTryCnt += 1
             self.LoopAndProcessLogic() # 然后进入主线程循环，可以发送请求
             self.WaitForMainThreadQuit(self.iSecondsWaitForSynCmd)
-        except CssException,e:
+        except Exception,e:
             import traceback
             traceback.print_exc() #WeiYF.20151022 打印异常整个堆栈 这个对于动态加载非常有用
-            PrintTimeMsg('TCmdStringSck.Exception.e=(%s)' % (str(e)))
+            PrintTimeMsg('StartMainThreadLoop.e=(%s)' % (e))
 
     def WaitForMainThreadQuit(self, iTimeoutSeconds):
         # 等待主线程退出
         def cbWaitForAsynQuit(sHint,iWaitCount):
             # PrintTimeMsg('cbWaitForThread.%s#%d' % (sHint,iWaitCount))
+            if self.gef.IsExitFlagTrue():
+                return ['WSQ','WaitAndCheck.FlagQuit']
             return []
         return self.gef.WaitAndCheck('WaitForMainThreadQuit',cbWaitForAsynQuit,iTimeoutSeconds)
 
     def cbReadFmServerToQueue(self, iLoopCnt): #called by StartOneThread.run()
         # 从服务端读取数据，转发到接收队列上
-        sRet, oTuple = self.oObj.ReadCmdStrFromLink(self.iSecondsReadFmServer)
-        if sRet=='OK':
-            (dwCmdId,CmdStr) = oTuple
-            if IsHeartBeat(dwCmdId):
-                self.oObj.EchoHeartBeatMsg(CmdStr)
+        try:
+            sRet, oTuple = self.oObj.ReadCmdStrFromLink(self.iSecondsReadFmServer)
+            if sRet=='OK':
+                (dwCmdId,CmdStr) = oTuple
+                if IsHeartBeat(dwCmdId):
+                    self.oObj.EchoHeartBeatMsg(CmdStr)
+                else:
+                    dictObj = {}
+                    dictObj['CmdStr'] = CmdStr
+                    dictObj['dwCmdId'] = dwCmdId
+                    self.QueueRecv.PutToQueue(dictObj)
+                    iQueueSize = self.QueueRecv.GetQueueSize()
+                    # PrintTimeMsg('cbReadFmSocketToQueue.QueueSize=%s,dictObj=(%s)' % (
+                    #     iQueueSize,str(dictObj)))
+            elif sRet=='TimeOut':
+                self.oObj.SendHeartBeatMsg('0','HeartBeat TimeOut From Client')
             else:
-                dictObj = {}
-                dictObj['CmdStr'] = CmdStr
-                dictObj['dwCmdId'] = dwCmdId
-                self.QueueRecv.PutToQueue(dictObj)
-                iQueueSize = self.QueueRecv.GetQueueSize()
-                # PrintTimeMsg('cbReadFmSocketToQueue.QueueSize=%s,dictObj=(%s)' % (
-                #     iQueueSize,str(dictObj)))
-        elif sRet=='TimeOut':
-            self.oObj.SendHeartBeatMsg('0','HeartBeat TimeOut From Client')
-        else:
-            sErrMsg = oTuple
-            self.TerminateMainThread("cbReadFmSocketToQueue.sErrMsg=(%s)" % (oTuple))#会退出
+                sErrMsg = oTuple
+                self.TerminateMainThread("cbReadFmSocketToQueue.sErrMsg=(%s)" % (oTuple))#会退出
+        except Exception,e:
+            self.TerminateMainThread("cbReadFmSocketToQueue.e=(%s)" % (e))#会退出
 
     def cbSendQueueDataToServer(self, sQueueName, dictObj):
         # 发送队列数据到服务端
         # PrintTimeMsg('cbSendQueueDataToServer.dictObj=%s=' % (str(dictObj)))
-        dictParam = dictObj.get('object',{})
-        CmdStr = dictParam.get('CmdStr',[])
-        dwCmdId = dictParam.get('dwCmdId',CMDID_HREAT_BEAT)
-        self.oObj.WriteCmdStrToLink(dwCmdId,CmdStr)
+        try:
+            dictParam = dictObj.get('object',{})
+            CmdStr = dictParam.get('CmdStr',[])
+            dwCmdId = dictParam.get('dwCmdId',CMDID_HREAT_BEAT)
+            bWriteOK = self.oObj.WriteCmdStrToLink(dwCmdId,CmdStr)
+            if not bWriteOK:
+                self.TerminateMainThread("cbSendQueueDataToServer.WriteCmdStrToLink.Error")#会退出
+        except Exception,e:
+            self.TerminateMainThread("cbSendQueueDataToServer.e=(%s)" % (e))#会退出
 
     def cbDealQueueDataFmServer(self, sQueueName, dictObj):
         # 处理从服务端返回的数据

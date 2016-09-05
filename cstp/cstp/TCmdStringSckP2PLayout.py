@@ -21,12 +21,13 @@ CMD3_P2PLAYOUT_TRAVERSE_COUNT = 'TraverseCount'
 #-------------------------------------------------
 class TCmdStringSckP2PLayout(TCmdStringSck):
 
-    def __init__(self, sHubId,sHostAndPort,sPairId,sSuffix,sAcctPwd,sClientInfo):
+    def __init__(self, sHubId,sHostAndPort,sPairId,sSuffix,sAcctPwd,sClientInfo, bVerbosePrintCmdStr = True):
         self.sPairId = sPairId
         self.sSuffix = sSuffix
         self.sSuffixOnlineList = ''   #当前在线后缀列表
         sAcctId = sPairId+CHAR_SEP_P2PLAYOUT+sSuffix
-        TCmdStringSck.__init__(self,sHubId,P2PKIND_P2PLAYOUT,sHostAndPort,sAcctId,sAcctPwd,'Y',sClientInfo)
+        TCmdStringSck.__init__(self,sHubId,P2PKIND_P2PLAYOUT,sHostAndPort,sAcctId,sAcctPwd,'Y',
+                               sClientInfo,bVerbosePrintCmdStr)
         self.iOneSecondClock = 0
 
     def LoopAndProcessLogic(self):
@@ -163,8 +164,9 @@ def StartCmdStringSckP2PLayout(dictPeerByParam, sHostName4Param, sAppId, clsSckP
     sSuffix = dictApp.get('sSuffix', '')
     sAcctPwd = dictApp.get('sAcctPwd', '')
     sClientInfo = dictApp.get('sClientInfo', '')
+    bVerbose = dictApp.get('bVerbose', 'True')=='True'
     if sIPPort and sHubId and sPairId and sSuffix:
-        cssa = clsSckP2PLayout(sHubId,sIPPort,sPairId,sSuffix,sAcctPwd,sClientInfo)
+        cssa = clsSckP2PLayout(sHubId,sIPPort,sPairId,sSuffix,sAcctPwd,sClientInfo,bVerbose)
         cssa.StartMainThreadLoop()
     else:
         sErrMsg = ''
@@ -175,6 +177,57 @@ def StartCmdStringSckP2PLayout(dictPeerByParam, sHostName4Param, sAppId, clsSckP
         sErrMsg = '(%s) is null' % sErrMsg[:-1] #剔除最后一个逗号
         PrintTimeMsg('StartCmdStringSckP2PLayout.sErrMsg=%s!' % (sErrMsg))
         sys.exit(-1)
+
+#--------------------------------------
+# WeiYF.20160825 将启动过程封装为一个共享函数，其中 dictPeerByParam 格式如下：
+gDictPeerByParam = {
+    # CSTP Peer运行参数，以 sHostName4Param 为键值
+    'LocalTest': {  #本地环境  #sHostName4Param
+        'sIPPort': '127.0.0.1:8888',
+        'sHubId': 'fba008448317ea7f5c31f8e19c68fcf7',
+        'sPairId': '@sPairId',
+    },
+    # WeiYF.20160825 Peer配置尽可能与Hub一样的结构，这样方便复制
+    'SH_@sPairId': {
+        '@sSuffix': '@sPassword',
+    },
+}
+
+def StartCmdStringSckP2PLayoutSH(dictPeerByParam, sHostName4Param, sSuffix, bVerbose,
+                                 clsSckP2PLayout, *args, **kwargs):
+    # 创建并启动 clsSckP2PLayout 类
+    # 出错后不要退出，改为返回 False ，交外围程序继续处理
+    dictParam = dictPeerByParam.get(sHostName4Param,{})
+    if not dictParam:
+        PrintTimeMsg('StartCmdStringSckP2PLayoutSH.get(%s)={}Error!' % sHostName4Param)
+        return False
+    sPairId = dictParam.get('sPairId', '')
+    if not sPairId:
+        PrintTimeMsg('StartCmdStringSckP2PLayoutSH.sPairId=Null,Error!' % (sPairId))
+        return False
+    sPairIdSH = 'SH_'+sPairId
+    dictApp = dictPeerByParam.get(sPairIdSH,{})
+    if not dictApp:
+        PrintTimeMsg('StartCmdStringSckP2PLayoutSH.get(%s)={}Error!' % (sPairIdSH))
+        return False
+    sIPPort = dictParam.get('sIPPort', '')
+    sHubId = dictParam.get('sHubId', '')
+    sAcctPwd = dictApp.get(sSuffix, '')
+    if sIPPort and sHubId and sSuffix and sAcctPwd:
+        sClientInfo = 'ShareHub'
+        cssa = clsSckP2PLayout(sHubId,sIPPort,sPairId,sSuffix,sAcctPwd,sClientInfo,
+                               bVerbose, *args, **kwargs)
+        cssa.StartMainThreadLoop()
+        return True
+    else:
+        sErrMsg = 'sSuffix=%s,' % (sSuffix) #''
+        if not sIPPort: sErrMsg += 'sIPPort,'
+        if not sHubId: sErrMsg += 'sHubId,'
+        if not sSuffix: sErrMsg += 'sSuffix,'
+        if not sAcctPwd: sErrMsg += 'sAcctPwd,'
+        sErrMsg = '(%s) is null' % sErrMsg[:-1] #剔除最后一个逗号
+        PrintTimeMsg('StartCmdStringSckP2PLayoutSH.sErrMsg=%s!Error!' % (sErrMsg))
+        return False
 
 
 #--------------------------------------

@@ -65,10 +65,13 @@ class TCmdPipeClient:
             f.write(sS)
 
 def testTCmdPipeClient():
-    c = TCmdPipeClient('127.0.0.1:8805')
+    # c = TCmdPipeClient('127.0.0.1:8805')
+    #c = TCmdPipeClient('127.0.0.1:9801')
+    c = TCmdPipeClient('192.168.2.199:9801')
     iCnt = 0
     while iCnt<5:
-        bRet = c.SendPipeRequest(['Test','One','2','three','iCnt=%d' % iCnt])
+        # bRet = c.SendPipeRequest(['Test','One','2','three','iCnt=%d' % iCnt])
+        bRet = c.SendPipeRequest(['*','Test','One','2','three','iCnt=%d' % iCnt])
         if not bRet:
             PrintTimeMsg("testTCmdPipeClient.SendPipeRequest.Error.iCnt=%d" % (iCnt))
             break

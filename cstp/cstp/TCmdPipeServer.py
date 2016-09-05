@@ -11,7 +11,7 @@ import os
 import socket
 from weberFuncs import GetCurrentTime,PrintTimeMsg,PrintAndSleep
 from CSockReadWrite import CSockReadWrite
-
+from CssException import CssException,gef
 
 #--------------------------------------
 class TCmdPipeServer:
@@ -37,12 +37,16 @@ class TCmdPipeServer:
     def __del__(self):
         pass
 
+    def SetLoopRunFlagToQuit(self, sHint):
+        self.bLoopRunFlag = False
+        PrintTimeMsg("SetLoopRunFlagToQuit.sHint=%s=" % (sHint))
+
     def LoopAndWaitPipe(self):
         iLoopCntAccept = 0
-        while self.bLoopRunFlag:
+        while self.bLoopRunFlag and (not gef.IsExitFlagTrue()):
             self.AcceptOneClient()
             iLoopCntRead = 0
-            while self.bLoopRunFlag:
+            while self.bLoopRunFlag and (not gef.IsExitFlagTrue()):
                 try:
                     sRet,sMsg = self.sockRW.ReadCmdStrFromLink(self.iSecondsTimeOut)
                     if sRet=='OK':
@@ -55,6 +59,7 @@ class TCmdPipeServer:
                 except Exception, e:
                     import traceback
                     traceback.print_exc() #WeiYF.20151022 打印异常整个堆栈 这个对于动态加载非常有用
+                    gef.SetExitFlagTrue('LoopAndWaitPipe.e=%s=' % (e))
                 iLoopCntRead += 1
             self.sockRW.sock.close()
             iLoopCntAccept += 1

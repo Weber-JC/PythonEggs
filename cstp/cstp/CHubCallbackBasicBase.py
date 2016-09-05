@@ -111,6 +111,7 @@ class CHubCallbackBasicBase:
         self.iTestReplyCnt = 0
         self.bQuitLoopFlag = False  # 循环控制变量，由主控程序赋值
         self.sSelfHubId = ''
+        self.bVerbosePrintCmdStr = True
 
         sFNLogClient = 'logClientOnOff.txt'
         self.sFNameLogClient = '/tmp/'+sFNLogClient
@@ -156,6 +157,7 @@ class CHubCallbackBasicBase:
         self.oBind.iNowLinkNum = 0
         PrintTimeMsg("HandleServerStart(%s,%s)..." % (
             self.sHubId, self.GetHubAttrValue('sServerIPPort','@')))
+        self.bVerbosePrintCmdStr = self.GetHubAttrValue('bVerbosePrintCmdStr',True)
 
     def HandleServerStop(self):
         # 处理服务端结束事件
@@ -246,7 +248,9 @@ class CHubCallbackBasicBase:
             oLink = self.dictObjLinkByCIP.get(sClientIPPort,None)
             if oLink:
                 oLink.iReplyCmdNum += 1  #self.GetHubAttrValue('sHubId','@')
-                PrintTimeMsg("HandleCheckAllLinkReply.Fm(%s).iReplyCmdNum=%s=" % (sClientIPPort, oLink.iReplyCmdNum ))
+                if self.bVerbosePrintCmdStr:
+                    PrintTimeMsg("HandleCheckAllLinkReply.Fm(%s).iReplyCmdNum=%s=" % (
+                        sClientIPPort, oLink.iReplyCmdNum ))
         return (sClientIPPort,dwCmdId,CmdOStr)
 
     def DoHandleCheckAllLinkReply(self):

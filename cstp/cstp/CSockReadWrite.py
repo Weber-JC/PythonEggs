@@ -26,7 +26,7 @@ import sys
 import socket
 
 from weberFuncs import GetCurrentTime,PrintTimeMsg,printHexString,printCmdString
-
+from CssException import CssException
 from cstpFuncs import SerialCstpHeadFmString,SerialCmdStrFmString,SerialCstCmdStrToString,\
     CMDID_HREAT_BEAT, CMDID_NOTIFY_MSG, IsCmdRequest
 
@@ -97,6 +97,7 @@ class CSockReadWrite:
                 except socket.timeout:
                     return 'TimeOut',"shouldReadLenData.iSecondsTimeOut=%s=" % iSecondsTimeOut
             except socket.error,e:
+                # raise CssException(401,'shouldReadLenData(%s)ErrOut=%s' % (iDataLen,str(e)))
                 return 'Error','shouldReadLenData(%s)ErrOut=%s' % (iDataLen,str(e))
             if (len(listOut)>=iDataLen): break
         if listOut:
@@ -140,6 +141,7 @@ class CSockReadWrite:
             return True
         except socket.error,e:
             self.SetCloseQuitFlag("Error sending data:%s!" % str(e))
+            # raise CssException(402,"Error sending data:%s!" % str(e))
             return False
 
     def SendHeartBeatMsg(self, sReasonCode, sReasonDesc):

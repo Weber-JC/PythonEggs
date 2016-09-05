@@ -66,7 +66,8 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
         sWhereMsg = 'CHubCallbackP2PLayout.BroadcastP2PMsgToSuffixSet'
         CmdOStrRet = GenOkMsgTuple(sWhereMsg)
         iSndCnt = 0
-        PrintTimeMsg('BroadcastP2PMsgToSuffixSet.setSuffix=%s=' % str(setSuffix))
+        if self.bVerbosePrintCmdStr:
+            PrintTimeMsg('BroadcastP2PMsgToSuffixSet.setSuffix=%s=' % str(setSuffix))
         for sSuffix in setSuffix:
             CmdOStr = self.SendP2PMsgToPeerByPairId(sPairId,sSuffix,CmdIStr)
             if CmdOStr[0]!='OK' and CmdOStrRet[0]=='OK':# 仅记录首个错误
@@ -128,7 +129,8 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
         else:
             CmdOStr = self.CheckPairPwdStatus(sPairId, sSuffix, sAcctPwd)
             if CmdOStr[0]=='OK': #bPass:
-                PrintTimeMsg('DoHandleCheckAuthP1.*******.dictCIPByPeerId=%s=' % str(self.dictCIPByPeerId))
+                if self.bVerbosePrintCmdStr:
+                    PrintTimeMsg('DoHandleCheckAuthP1.*******.dictCIPByPeerId=%s=' % str(self.dictCIPByPeerId))
                 sPeerId = self.GetPeerIdFmPairId(sPairId, sSuffix)
                 sOldIPPort = self.dictCIPByPeerId.get(sPeerId,'')
                 if sOldIPPort=='' or ynForceLogin in 'Yy':
@@ -143,7 +145,8 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
                     oLink.sPairId = sPairId
                     oLink.sSuffix = sSuffix
                     self.dictCIPByPeerId[sPeerId] = oLink.sClientIPPort
-                    PrintTimeMsg('DoHandleCheckAuthP1.dictCIPByPeerId=%s=' % str(self.dictCIPByPeerId))
+                    if self.bVerbosePrintCmdStr:
+                        PrintTimeMsg('DoHandleCheckAuthP1.dictCIPByPeerId=%s=' % str(self.dictCIPByPeerId))
                     sOnlineList = ','.join(setSuffix)
                     #发送上线通知消息
                     CmdIStr = [
@@ -155,6 +158,8 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
                         GetCurrentTime(), #服务器时间
                     ]
                     self.BroadcastP2PMsgByPairId(sPairId, sSuffix, CmdIStr)
+                    if not self.bVerbosePrintCmdStr:
+                        PrintTimeMsg('PeerOnline(%s).sOnlineList=%s=' % (sSuffix,sOnlineList))
                     return ('OK',
                         sP2PKind,
                         sHubId,
@@ -209,6 +214,8 @@ class CHubCallbackP2PLayout(CHubCallbackQueueBase):
             GetCurrentTime(), #服务器时间
         ]
         self.BroadcastP2PMsgByPairId(sPairId, sSuffix,CmdIStr)
+        if not self.bVerbosePrintCmdStr:
+            PrintTimeMsg('PeerOffline(%s).sOnlineList=%s=' % (sSuffix,sOnlineList))
 
     def HandleRequestCmd(self, sClientIPPort, dwCmdId, CmdIStr):
         # 处理客户端请求命令
