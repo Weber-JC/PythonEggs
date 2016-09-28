@@ -84,7 +84,7 @@ class CHubCallbackBasicBase:
         HandleServerStart 服务启动
             HandleClientBegin 客户端链接建立
             HandleCheckAuth 客户端鉴权，Login
-                HandleCheckReply 处理客户端发起的请求命令
+                HandleRequestCmd 处理客户端发起的请求命令
                 HandleCheckReply 检查需要返回客户端的应答数据，包括广播消息
             HandleClientEnd 客户端链接断开，也包括Logout
         HandleServerStop 服务停止

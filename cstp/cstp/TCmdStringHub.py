@@ -5,7 +5,7 @@
 Created on 2016-5-30
 @author: Weber Juche
 
-CSTP(Command String List Transfer Protocol) 命令串列表传出协议
+CSTP(Command String List Transfer Protocol) 命令串列表传输协议
 
 借助 gevent 微线程实现CSTP异步接入框架 TCmdStringHub.py
 设计目标：在支持传统“客户端/服务器(C/S)”架构前提下，扩展支持“客户端到客户端(P2P)”架构。

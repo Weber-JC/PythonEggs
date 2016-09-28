@@ -5,7 +5,7 @@
     封装处理对象队列的线程
 """
 import sys
-from threading import Thread
+from threading import Thread,Lock
 from WyfPublicFuncs import PrintTimeMsg,PrintAndSleep
 
 try:
@@ -36,7 +36,63 @@ def testWyfThreadDoSth():
     StartThreadDoSomething(cbDoSth)
     return
 #----------------------------------------------------------
+class CThreadDiscardDeal():
+    """
+        抛弃型输出处理线程
+    """
+    def __init__(self, callBackDealOne):
+        if not callBackDealOne:
+            PrintTimeMsg('CThreadDiscardDeal.callBackDealOne=None,EXIT!')
+            sys.exit(-1)
+        self.callBackDealOne = callBackDealOne
+
+        self.bLoopRunFlag = True
+        self.mutex = Lock()
+        self.dictDealFlag = {}
+        StartThreadDoSomething(self.ftCallBackForPush)
+
+    def MarkDealFlag(self, sKey): # 标记DealFlag
+        if self.mutex.acquire(): # blocking
+            iDealFlagOld = self.dictDealFlag.get(sKey,0)
+            self.dictDealFlag[sKey] = iDealFlagOld+1
+            self.mutex.release()
+
+    def ClearDealFlag(self, sKey): # 清空DealFlag
+        if self.mutex.acquire(): # blocking
+            self.dictDealFlag[sKey] = 0
+            self.mutex.release()
+
+    def ftCallBackForPush(self):
+        while self.bLoopRunFlag:
+            iDealCnt = 0
+            for (sKey,iDealFlag) in self.dictDealFlag.items():
+                if iDealFlag>0:
+                    self.callBackDealOne(sKey,iDealFlag)
+                    self.ClearDealFlag(sKey)
+                    iDealCnt += 1
+            if iDealCnt==0:
+                import time
+                sleepSeconds = 0.001 # 没有消息时，sleep
+                time.sleep(sleepSeconds)
+
+    def SetLoopRunFlag(self, bFlag):
+        self.bLoopRunFlag = bFlag
+        PrintTimeMsg('CThreadDiscardDeal.SetLoopRunFlag=(%s)!' % (self.bLoopRunFlag))
+
+def testWyfThreadDiscardDeal():
+    def cbTest(sKey,iDealFlag):
+        PrintTimeMsg('cbTest.sKey=%s,iDealFlag=%s=' % (sKey,iDealFlag))
+    o = CThreadDiscardDeal(cbTest)
+    iCnt = 0
+    while iCnt<5:
+        o.MarkDealFlag('abcd%s' % iCnt)
+        PrintAndSleep(1,'testWyfThreadDiscardDeal.%d' %  iCnt)
+        iCnt += 1
+#----------------------------------------------------------
 class CThreadCacheByQueue():
+    """
+        借助队列来缓存数据，方便线程处理
+    """
     def __init__(self, callBackDealOne):
         if not callBackDealOne:
             PrintTimeMsg('CThreadCacheByQueue.callBackDealOne=None,EXIT!')
@@ -92,5 +148,6 @@ def testWyfThreadQueue():
 #-------------------------------
 if __name__ == '__main__':
     # testWyfThreadDoSth()
-    testWyfThreadQueue()
+    # testWyfThreadQueue()
+    testWyfThreadDiscardDeal()
 

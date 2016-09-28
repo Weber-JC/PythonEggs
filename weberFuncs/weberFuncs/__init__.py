@@ -28,7 +28,7 @@ from CSerialJson import CSerialJson
 from SimpleShiftEncDec import SimpleShiftEncode,SimpleShiftDecode
 
 from WyfSupplyFuncs import get_total_size
-from WyfQueueThread import StartThreadDoSomething, CThreadCacheByQueue
+from WyfQueueThread import StartThreadDoSomething, CThreadCacheByQueue, CThreadDiscardDeal
 
 from JsonRpcFuncs import GetRedisClient
 from CAutoConnectRedis import CAutoConnectRedis
